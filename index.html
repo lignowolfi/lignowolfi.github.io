@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>LignoWolfi Handy</title>
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LignoWolfi"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef0f2"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
+<style>
+/* Werkzeug im Ligno-Stil: hellgraue Leisten, Bild füllt alles, feste Messmarke in der Mitte. Bewusst nur ein (helles) Erscheinungsbild. */
+:root{--leiste:#eef0f2;--rand:#b9bec4;--text:#1d2125;--leise:#5d656e;--akzent:#1f6fd1;--akzent2:#d8e6f8;--bildgrund:#7d8084;--marke:#e0261b;--saite:#16b316;--grund:#e4e6e9;color-scheme:light;
+ --font:-apple-system,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif}
+html,body{height:100%}
+body{margin:0;background:var(--grund);color:var(--text);font:14px var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.leiste{display:flex;align-items:center;gap:6px;background:var(--leiste);border-color:var(--rand);border-style:solid;border-width:0;padding:6px max(8px,env(safe-area-inset-left,0px)) 6px max(8px,env(safe-area-inset-right,0px));flex-wrap:nowrap;overflow-x:auto}
+#oben{border-bottom-width:1px}
+#unten{border-top-width:1px;gap:8px;padding-top:8px;padding-bottom:8px}
+button{font:inherit;color:var(--text);background:#fff;border:1px solid var(--rand);border-radius:8px;min-height:40px;min-width:40px;padding:0 9px;white-space:nowrap;flex:0 0 auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:active{background:var(--akzent2)}
+button[aria-pressed=true]{background:var(--akzent2);border-color:var(--akzent)}
+button:disabled{opacity:.4}
+button:focus-visible{outline:2px solid var(--akzent);outline-offset:1px}
+.seg{display:flex}.seg button{border-radius:0}.seg button:first-child{border-radius:8px 0 0 8px}.seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
+#setzen{flex:1 1 auto;min-width:0;min-height:56px;font-size:18px;font-weight:600;background:var(--akzent);color:#fff;border-color:var(--akzent)}
+#setzen:active{background:#17569f}
+.fein{font-size:20px;min-width:48px;min-height:56px}
+#unten button:not(#setzen):not(.fein){min-height:56px}
+#stat{display:block;font-variant-numeric:tabular-nums;color:var(--leise);font-size:12px;margin-top:2px}
+#feld{position:relative;flex:1 1 auto;background:var(--bildgrund);overflow:hidden}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#info{position:absolute;left:8px;right:8px;top:8px;background:rgba(255,255,255,.9);border-radius:6px;padding:5px 8px;font-size:13px;pointer-events:none;color:var(--text)}
+#modus{position:absolute;right:8px;bottom:8px;display:none}
+#modus button{background:#fff8d6;border-color:#c9a800}
+/* Startseite */
+#start{position:absolute;inset:0;overflow:auto;background:var(--grund);padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#start h1{font-size:22px;margin:0 0 4px;text-wrap:balance}
+#start p{color:var(--leise);margin:0 0 14px;max-width:36em;line-height:1.45}
+#start .gross{min-height:52px;font-size:16px;background:var(--akzent);color:#fff;border-color:var(--akzent);padding:0 18px}
+#liste{margin-top:18px;display:flex;flex-direction:column;gap:6px;max-width:36em}
+#liste .los{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#fff;border:1px solid var(--rand);border-radius:8px;padding:10px 12px}
+#liste .los b{font-weight:600}
+#liste .los span{color:var(--leise);font-variant-numeric:tabular-nums;white-space:nowrap}
+#liste h2{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--leise);margin:8px 0 2px;font-weight:600}
+/* Menue-Blatt */
+#blatt{position:absolute;left:0;right:0;bottom:0;background:#f7f8f9;border-top:1px solid var(--rand);box-shadow:0 -4px 16px rgba(0,0,0,.18);padding:10px max(12px,env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-right,0px));display:none;z-index:5}
+#blatt .t{font-weight:600;margin:2px 2px 10px}
+#blatt .g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#blatt .g button{min-height:48px;text-align:left}
+#blatt input{width:100%;box-sizing:border-box;font:16px var(--font);padding:10px;border:1px solid var(--rand);border-radius:8px;margin-bottom:8px}
+#blatt .rot{color:#b3261e}
+input[type=file]{display:none}
+</style></head><body>
+<div id="app">
+ <div class="leiste" id="oben">
+  <button id="bOpen" title="Dendro-Bilder oder Handy-ZIP öffnen">Öffnen</button>
+  <div class="seg"><button id="sB" aria-pressed="true" disabled>Bass</button><button id="sT" aria-pressed="false" disabled>Diskant</button></div>
+  <button id="zout" title="Verkleinern">−</button><button id="zin" title="Vergrößern">+</button>
+  <button id="bFertig" title="Messung als fertig melden">Fertig</button>
+ </div>
+ <div id="feld">
+  <canvas id="cv"></canvas>
+  <div id="info"><span id="itext">Bild mit dem Finger unter die rote Marke schieben, dann „Setzen“.</span><span id="stat"></span></div>
+  <div id="modus"><button id="bModusEnde">Einfügen beenden</button></div>
+  <div id="start">
+   <h1>LignoWolfi Handy</h1>
+   <p>Öffne die Dendro-Bilder eines Instruments direkt aus OneDrive, z. B. <b>26111001B_CollinMezin.jpg</b> und <b>26111001T_CollinMezin.jpg</b>. In „Dateien“ oben rechts auf „Auswählen“ tippen, dann kannst du Bass und Diskant zusammen wählen. Eine Handy-ZIP geht auch.</p>
+   <button class="gross" id="bOpen2">Bilder öffnen</button>
+   <div id="liste"><h2>Im iPhone gespeichert</h2><div id="lose"><p>Noch nichts gespeichert. Nach dem Öffnen bleiben Bilder und Messung im iPhone, auch ohne Internet. Hier kannst du sie später direkt weiter messen.</p></div></div>
+  </div>
+  <div id="blatt"></div>
+ </div>
+ <div class="leiste" id="unten">
+  <button id="bZur" title="Letzte Aktion rückgängig">↶</button>
+  <button id="bKette" title="Kette lösen: Spurwechsel">Kette</button>
+  <button class="fein" id="bHoch" title="Ausschnitt 1 Punkt nach oben">▲</button>
+  <button class="fein" id="bRunter" title="Ausschnitt 1 Punkt nach unten">▼</button>
+  <button id="setzen">Setzen</button>
+  <button id="bRing" title="Menü für den Ring an der Marke">⋯</button>
+ </div>
+</div>
+<input type="file" id="fotos" multiple accept="image/*">
+<input type="file" id="datei" multiple accept=".jpg,.jpeg,image/jpeg,.zip,application/zip,application/x-zip-compressed">
+<script>
+// ================= LignoWolfi Handy =================
+// Datenmodell wie die Messseite: pts [[x,y(,1=Spurwechsel)]], kom [{p:[x,y],text}] je Seite, in Bildpunkten des 1200-dpi-Bildes.
+const TW=100;                       // Spurbreite (Bildpunkte)
+const ZMIN=1/10, ZMAX=4;
+let F=null, MAP=null, META=null, KEY=null;
+let side='B', Z=0.5, ox=0, oy=0, dpr=1, showS=true;
+let PTS={B:[],T:[]}, KOM={B:[],T:[]}, open={B:true,T:true}, LERN={B:[],T:[]};
+let mode=null, pend=null, lastPred=null, lastHi=null, db=null, saveT={}, lernT={};
+const $=id=>document.getElementById(id);
+const cv=$('cv'), cx=cv.getContext('2d');
+const MM=s=>25.4/(META&&META.seiten[s]?META.seiten[s].dpi:1200);
+function S(){return META&&META.seiten[side]}
+function info(t){$('itext').textContent=t}
+
+// ---------- ZIP lesen (ungepackt), ohne die ganze Datei zu laden ----------
+async function zipIndex(file){const n=file.size,tl=Math.min(n,65557);const tb=await file.slice(n-tl).arrayBuffer();const tv=new DataView(tb);let e=-1;for(let i=tl-22;i>=0;i--)if(tv.getUint32(i,true)===0x06054b50){e=i;break}if(e<0)throw new Error('keine ZIP-Datei');
+ const cnt=tv.getUint16(e+10,true),csz=tv.getUint32(e+12,true),coff=tv.getUint32(e+16,true);const cb=await file.slice(coff,coff+csz).arrayBuffer();const cd=new DataView(cb);const dec=new TextDecoder();const m={};let p=0;
+ for(let k=0;k<cnt;k++){const size=cd.getUint32(p+20,true),nl=cd.getUint16(p+28,true),el=cd.getUint16(p+30,true),cl=cd.getUint16(p+32,true),lo=cd.getUint32(p+42,true);m[dec.decode(new Uint8Array(cb,p+46,nl))]={lo,size};p+=46+nl+el+cl}return m}
+async function zipBlob(name,type){const e=MAP[name];if(!e)return null;const h=new DataView(await F.slice(e.lo,e.lo+30).arrayBuffer());const st=e.lo+30+h.getUint16(26,true)+h.getUint16(28,true);return F.slice(st,st+e.size,type||'image/jpeg')}
+async function toBitmap(blob){if(window.createImageBitmap){try{return await createImageBitmap(blob)}catch(e){}}return await new Promise((res,rej)=>{const u=URL.createObjectURL(blob),im=new Image();im.onload=()=>{res(im)};im.onerror=rej;im.src=u})}
+
+// ---------- Kacheln ----------
+const cache=new Map();let tick=0;const MAXT=40;
+function tileKey(s,lv,c,r){return s+'/'+lv+'/'+c+'_'+r}
+function loadTile(s,lv,c,r){const k=tileKey(s,lv,c,r);let e=cache.get(k);if(e){e.t=++tick;return e.p}
+ e={t:++tick,img:null};e.p=holeBlob(k+'.jpg').then(b=>b?toBitmap(b):null).then(im=>{e.img=im;evict();zeichne();return im}).catch(()=>null);cache.set(k,e);return e.p}
+function tileNow(s,lv,c,r){const e=cache.get(tileKey(s,lv,c,r));if(e){e.t=++tick;return e.img}loadTile(s,lv,c,r);return null}
+function evict(){if(cache.size<=MAXT)return;const a=[...cache.entries()].filter(([k,e])=>e.img).sort((x,y)=>x[1].t-y[1].t);while(cache.size>MAXT&&a.length){const[k,e]=a.shift();try{e.img.close&&e.img.close()}catch(_){}cache.delete(k)}}
+const OVI={B:null,T:null};
+async function drawRegion(ctx,s,lv,sx,sy,sw,sh,dx,dy,k,wait){const m=META.seiten[s],st=m.stufen[lv],f=st.f,ts=META.ts*f;const jobs=[];
+ for(let r=Math.max(0,Math.floor(sy/ts));r<=Math.min(st.rows-1,Math.floor((sy+sh)/ts));r++)for(let c=Math.max(0,Math.floor(sx/ts));c<=Math.min(st.cols-1,Math.floor((sx+sw)/ts));c++){
+  const im=wait?await loadTile(s,lv,c,r):tileNow(s,lv,c,r);if(!im)continue;const x0=c*ts,y0=r*ts,w=im.width*f,h=im.height*f;
+  const ax=Math.max(sx,x0),ay=Math.max(sy,y0),bx=Math.min(sx+sw,x0+w),by=Math.min(sy+sh,y0+h);if(bx<=ax||by<=ay)continue;
+  const X0=Math.floor(dx+(ax-sx)*k),Y0=Math.floor(dy+(ay-sy)*k),X1=Math.ceil(dx+(bx-sx)*k),Y1=Math.ceil(dy+(by-sy)*k);
+  ctx.drawImage(im,(ax-x0)/f,(ay-y0)/f,(bx-ax)/f,(by-ay)/f,X0,Y0,X1-X0,Y1-Y0)}}
+
+// ---------- Geometrie ----------
+function cxOf(s,i){const p=PTS[s];let j=Math.min(i,p.length-1);while(j>0&&!p[j][2])j--;return p[j]?p[j][0]:0}
+function rings(s){const p=PTS[s],r=[];for(let i=1;i<p.length;i++){if(p[i][2])continue;const c=cxOf(s,i);r.push({i,a:[c,p[i-1][1]],b:[c,p[i][1]]})}return r}
+function W(){return cv.width/dpr}function H(){return cv.height/dpr}
+function mark(){return[W()/2,H()/2]}
+function toS(x,y){return[(x-ox)*Z,(y-oy)*Z]}
+function toI(sx,sy){return[sx/Z+ox,sy/Z+oy]}
+function saiteY(x){const m=S();const L=m&&m.saite;if(!L)return null;const X=L.x,Y=L.y,n=X.length-1;if(n<1)return Y[0];let k=0;while(k<n-1&&x>X[k+1])k++;return Y[k]+(Y[k+1]-Y[k])*(x-X[k])/((X[k+1]-X[k])||1)}
+function ringAt(p){const R=rings(side);for(let k=R.length-1;k>=0;k--){const r=R[k];if(Math.abs(p[0]-r.a[0])<=TW/2&&p[1]>=Math.min(r.a[1],r.b[1])&&p[1]<=Math.max(r.a[1],r.b[1]))return r.i}return -1}
+
+// ---------- Zeichnen ----------
+let rq=false;function zeichne(){if(rq)return;rq=true;requestAnimationFrame(()=>{rq=false;draw()})}
+function draw(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#7d8084';cx.fillRect(0,0,cv.width,cv.height);if(!META||!S())return;cx.setTransform(dpr,0,0,dpr,0,0);
+ const m=S(),w=W(),h=H();cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality='high';
+ // Grund: Uebersicht, darueber passende Kachelstufe
+ if(OVI[side]){const o=OVI[side],f=m.w/o.width;const sx=Math.max(0,ox),sy=Math.max(0,oy),ex=Math.min(m.w,ox+w/Z),ey=Math.min(m.h,oy+h/Z);if(ex>sx&&ey>sy)cx.drawImage(o,sx/f,sy/f,(ex-sx)/f,(ey-sy)/f,(sx-ox)*Z,(sy-oy)*Z,(ex-sx)*Z,(ey-sy)*Z)}
+ const ds=Z*dpr;const lv=ds>=0.6?0:(ds>=0.13?1:-1);if(lv>=0)drawRegion(cx,side,lv,ox,oy,w/Z,h/Z,0,0,Z,false);
+ const M=mark();
+ // Saitenlinie (gruen, in der Naehe der Marke ausgespart)
+ if(showS&&m.saite){cx.strokeStyle='rgba(22,179,22,.85)';cx.lineWidth=1;cx.beginPath();let first=true;for(let x=0;x<=w;x+=4){const y=toS(0,saiteY(x/Z+ox))[1];if(Math.abs(x-M[0])<TW*Z/2+40&&Math.abs(y-M[1])<30){first=true;continue}first?cx.moveTo(x,y):cx.lineTo(x,y);first=false}cx.stroke()}
+ // Ringe
+ const R=rings(side),P=PTS[side];
+ R.forEach((r,k)=>{const a=toS(r.a[0]-TW/2,r.a[1]),b=toS(r.b[0]+TW/2,r.b[1]);cx.strokeStyle='#000';cx.lineWidth=0.7;cx.strokeRect(a[0],Math.min(a[1],b[1]),b[0]-a[0],Math.abs(b[1]-a[1]));
+  if(Z>=0.2){cx.font='11px -apple-system,Segoe UI,sans-serif';cx.fillStyle='#000';cx.fillText(String(k),b[0]+4,(a[1]+b[1])/2+4)}});
+ if(lastHi&&P.length&&P[P.length-1]===lastHi){const c=cxOf(side,P.length-1);const a=toS(c-TW/2,lastHi[1]),b=toS(c+TW/2,lastHi[1]);cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke()}
+ // Gummiband vom letzten Punkt zur Marke
+ const mi=toI(M[0],M[1]);let anc=null,ax=0;if(mode&&mode.kind==='ins'){anc=mode.anchor;ax=cxOf(side,Math.max(0,mode.at-1))}else if(open[side]&&P.length){anc=P[P.length-1];ax=cxOf(side,P.length-1)}
+ if(anc&&!pend){const a=toS(ax-TW/2,anc[1]),b=toS(ax+TW/2,mi[1]);cx.strokeStyle='#5a5a5a';cx.lineWidth=1;cx.strokeRect(a[0],Math.min(a[1],b[1]),b[0]-a[0],Math.abs(b[1]-a[1]))}
+ // Marke: zwei waagerechte Striche links und rechts der Spur, Mitte frei; kleiner Pfeil links
+ const hw=TW*Z/2;cx.strokeStyle=pend?'#e08a00':'#e0261b';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(M[0]-hw-34,M[1]);cx.lineTo(M[0]-hw-3,M[1]);cx.moveTo(M[0]+hw+3,M[1]);cx.lineTo(M[0]+hw+34,M[1]);cx.stroke();
+ cx.fillStyle=cx.strokeStyle;cx.beginPath();cx.moveTo(M[0]-hw-3,M[1]);cx.lineTo(M[0]-hw-11,M[1]-5);cx.lineTo(M[0]-hw-11,M[1]+5);cx.closePath();cx.fill();
+ stat()}
+let gespeichert=null,fertigFlag=false;
+function stat(){const r=rings(side);let mm=0;r.forEach(q=>mm+=Math.abs(q.b[1]-q.a[1])*MM(side));$('stat').textContent=r.length+' Ringe · '+mm.toFixed(2)+' mm · '+(Z>=1?Math.round(Z)+':1':'1:'+(Math.round(10/Z)/10))+(gespeichert?' · gespeichert ✓ '+gespeichert.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):'')}
+function resize(){dpr=window.devicePixelRatio||1;const r=$('feld').getBoundingClientRect();const M0=META?toI(W()/2,H()/2):null;cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));if(M0){ox=M0[0]-W()/2/Z;oy=M0[1]-H()/2/Z}zeichne()}
+function setZoom(nz,px,py){nz=Math.max(ZMIN,Math.min(ZMAX,nz));const p=toI(px,py);Z=nz;ox=p[0]-px/Z;oy=p[1]-py/Z;zeichne()}
+
+// ---------- naechste Grenze vorhersagen (wie Messseite) ----------
+const SB=240;const OFF=document.createElement('canvas'),OFX=OFF.getContext('2d',{willReadFrequently:true});
+async function predictNext(a,b){const dx=b[0]-a[0],dy=b[1]-a[1],w=Math.hypot(dx,dy);const ux=dx/(w||1),uy=dy/(w||1);const fall=[b[0]+dx,b[1]+dy];if(w<3)return fall;
+ try{const Rr=Math.ceil(3*w+SB);const x0=Math.round(b[0]-Rr),y0=Math.round(b[1]-Rr),Sz=2*Rr;OFF.width=Sz;OFF.height=Sz;OFX.fillStyle='#808080';OFX.fillRect(0,0,Sz,Sz);await drawRegion(OFX,side,0,x0,y0,Sz,Sz,0,0,1,true);
+  const D=OFX.getImageData(0,0,Sz,Sz).data;const g=(x,y)=>{x=Math.round(x-x0);y=Math.round(y-y0);if(x<0||y<0||x>=Sz||y>=Sz)return NaN;const k=(y*Sz+x)*4;return D[k]*.3+D[k+1]*.59+D[k+2]*.11};
+  const T0=-0.3*w,T1=2.6*w,N=Math.ceil(T1-T0);const pr=new Float64Array(N);
+  for(let i=0;i<N;i++){const t=T0+i;let s=0,c=0;for(let j=-4;j<=4;j++){const o=j*SB/8;const v=g(b[0]+ux*t-uy*o,b[1]+uy*t+ux*o);if(!isNaN(v)){s+=v;c++}}pr[i]=c?s/c:NaN}
+  const sm=new Float64Array(N),r=Math.max(1,Math.round(w*0.1));for(let i=0;i<N;i++){let s=0,c=0;for(let k=-r;k<=r;k++){const v=pr[i+k];if(v===v&&i+k>=0&&i+k<N){s+=v;c++}}sm[i]=c?s/c:NaN}
+  const d=i=>(sm[Math.min(N-1,i+1)]-sm[Math.max(0,i-1)])/2;
+  let i0=Math.round(-T0),s0=0;for(let k=-3;k<=3;k++){const v=d(i0+k);if(Math.abs(v)>Math.abs(s0))s0=v}const sg=Math.sign(s0)||1;
+  let best=-1,bs=0;for(let i=Math.round(-T0+0.45*w);i<Math.min(N-1,Math.round(-T0+2.4*w));i++){const v=d(i)*sg;if(!(v>0))continue;const t=i+T0;const sc=v*Math.exp(-Math.pow(Math.log(t/w),2)/(2*0.3*0.3));if(sc>bs){bs=sc;best=t}}
+  if(best<0)return fall;return[b[0]+ux*best,b[1]+uy*best]}catch(e){return fall}}
+
+// ---------- Setzen ----------
+let predGen=0;
+async function setzen(){if(!S())return;const M=mark();const q=toI(M[0],M[1]).map(v=>Math.round(v*10)/10);const P=PTS[side];
+ if(pend&&pend.kind==='move'){merke('Grenze neu setzen');P[pend.i][0]=q[0];P[pend.i][1]=q[1];pend=null;info('Grenze neu gesetzt');save();zeichne();return}
+ if(mode&&mode.kind==='ins'){merke('Ring einfügen');P.splice(mode.at,0,[q[0],q[1]]);mode.at++;mode.anchor=P[mode.at-1];info('Ring eingefügt. „Setzen“ fügt den nächsten an.');save();zeichne();return}
+ const prev=P.length?P[P.length-1]:null;if(prev&&open[side]&&Math.abs(q[1]-prev[1])<2){info('Gleiche Stelle wie die letzte Grenze – Bild erst zur nächsten Grenze schieben');return}merke(!open[side]&&P.length?'Spurwechsel':'Setzen');if(!open[side]&&P.length){q.push(1);open[side]=true}
+ P.push(q);lastHi=q;
+ if(lastPred&&!q[2]&&prev){LERN[side].push({vorher:lastPred.y,geklickt:q[1],w:lastPred.w,x:q[0],t:Date.now(),handy:1});saveLern()}
+ lastPred=null;const R=rings(side);
+ info(q[2]?'Spurwechsel. Weiter mit „Setzen“ an der nächsten Grenze.':(R.length?'Ring '+(R.length-1)+': '+(Math.abs(q[1]-prev[1])*MM(side)).toFixed(2)+' mm':'Erste Grenze gesetzt'));save();zeichne();
+ if(prev&&!q[2]){const g=++predGen,c=cxOf(side,P.length-1),s0=side;const nx=await predictNext([c,prev[1]],[c,q[1]]);if(g!==predGen||s0!==side||P[P.length-1]!==q)return;oy=nx[1]-mark()[1]/Z;ox=c-mark()[0]/Z;lastPred={y:Math.round(nx[1]*10)/10,w:Math.abs(q[1]-prev[1])};zeichne()}}
+const UNDO={B:[],T:[]};
+function merke(was){UNDO[side].push({pts:JSON.stringify(PTS[side]),kom:JSON.stringify(KOM[side]),open:open[side],was});if(UNDO[side].length>300)UNDO[side].shift()}
+function zurueck(){const u=UNDO[side].pop();if(!u){info('Nichts mehr rückgängig zu machen');return}PTS[side]=JSON.parse(u.pts);KOM[side]=JSON.parse(u.kom);open[side]=u.open;mode=null;pend=null;modusAnzeige();lastPred=null;lastHi=null;predGen++;save();info('Rückgängig: '+u.was);const P=PTS[side];if(P.length){const p=P[P.length-1];ox=cxOf(side,P.length-1)-mark()[0]/Z;oy=p[1]-mark()[1]/Z}zeichne()}
+function kette(){if(!PTS[side].length||!open[side])return;merke('Kette lösen');open[side]=false;mode=null;pend=null;modusAnzeige();info('Kette gelöst. Bild zur neuen Stelle schieben, die letzte Grenze dort noch einmal setzen.');zeichne()}
+
+// ---------- Speichern im Artefakt ----------
+// ---------- Speichern im iPhone (IndexedDB) ----------
+const IDBP=new Promise((res,rej)=>{try{const r=indexedDB.open('lignowolfi',1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains('lose'))d.createObjectStore('lose');if(!d.objectStoreNames.contains('kacheln'))d.createObjectStore('kacheln')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});
+async function idb(store,mode,fn){const d=await IDBP;return new Promise((res,rej)=>{const tx=d.transaction(store,mode);const q=fn(tx.objectStore(store));let out;if(q)q.onsuccess=()=>{out=q.result};tx.oncomplete=()=>res(out);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error)})}
+const iget=(st,k)=>idb(st,'readonly',o=>o.get(k)),iput=(st,k,v)=>idb(st,'readwrite',o=>o.put(v,k)),idel=(st,k)=>idb(st,'readwrite',o=>o.delete(k)),iall=st=>idb(st,'readonly',o=>o.getAll()),ikeys=st=>idb(st,'readonly',o=>o.getAllKeys());
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+function datensatz(){const seiten={},ringe={};for(const x of['B','T'])if(META.seiten[x]){const m=META.seiten[x];seiten[x]={name:m.name,dpi:m.dpi,saite:m.saite||null,pts:PTS[x].map(p=>p.slice()),kom:KOM[x].map(k=>({p:k.p.slice(),text:k.text})),lern:LERN[x].slice(-3000)};ringe[x]=rings(x).length}return{key:KEY,seiten,ringe,fertig:fertigFlag,t:Date.now()}}
+let saveT0=null;
+function save(){if(!KEY||!META)return;clearTimeout(saveT0);saveT0=setTimeout(()=>{iput('lose',KEY,datensatz()).then(()=>{gespeichert=new Date();stat()}).catch(e=>{gespeichert=null;info('Speichern fehlgeschlagen: '+(e&&e.message||e));stat()})},300)}
+function saveLern(){save()}
+addEventListener('pagehide',()=>{if(KEY&&META){clearTimeout(saveT0);iput('lose',KEY,datensatz()).catch(()=>{})}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&KEY&&META){clearTimeout(saveT0);iput('lose',KEY,datensatz()).catch(()=>{})}});
+
+// ---------- Datei oeffnen ----------
+$('bOpen2').onclick=()=>$('datei').click();
+$('datei').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;const z=fs.find(f=>/\.zip$/i.test(f.name));if(z)await oeffne(z);else await oeffneBilder(fs)};
+async function oeffne(f){try{info('lade '+f.name+' …');MODE='zip';MEM.clear();F=f;MAP=await zipIndex(f);const mb=await zipBlob('meta.json','application/json');if(!mb)throw new Error('meta.json fehlt');META=JSON.parse(await mb.text());KEY=META.key;
+  for(const n of Object.keys(MAP))if(/\.jpg$/.test(n)){const b=await zipBlob(n);MEM.set(n,new Blob([await b.arrayBuffer()],{type:'image/jpeg'}))}MODE='mem';await merkeKacheln();
+  await nachLaden()}
+ catch(err){info('Datei lässt sich nicht öffnen: '+err.message)}}
+async function nachLaden(){try{
+  cache.clear();UNDO.B=[];UNDO.T=[];OVI.B=OVI.T=null;PTS={B:[],T:[]};KOM={B:[],T:[]};LERN={B:[],T:[]};open={B:true,T:true};mode=null;pend=null;lastHi=null;lastPred=null;
+  for(const s of['B','T'])if(META.seiten[s]){OVI[s]=await toBitmap(await holeBlob(s+'/ov.jpg'))}
+  fertigFlag=false;gespeichert=null;try{const d=await iget('lose',KEY);if(d){fertigFlag=!!d.fertig;for(const s of['B','T'])if(META.seiten[s]&&d.seiten&&d.seiten[s]){const x=d.seiten[s];PTS[s]=x.pts||[];KOM[s]=x.kom||[];LERN[s]=x.lern||[];if(!META.seiten[s].saite&&x.saite)META.seiten[s].saite=x.saite}}}catch(_){}
+  const bt=META.seiten.B&&/\d{8}BT/.test(META.seiten.B.name);$('sB').textContent=bt?'BT':'Bass';
+  $('sB').disabled=!META.seiten.B;$('sT').disabled=!META.seiten.T;$('start').hidden=true;
+  seite(META.seiten.B?'B':'T');info(KEY+(PTS[side].length?' – Messung geht weiter':' – oben am Rand anfangen'))}
+ catch(err){info('Datei lässt sich nicht öffnen: '+err.message)}}
+function seite(s){if(!META||!META.seiten[s])return;side=s;mode=null;pend=null;lastPred=null;modusAnzeige();$('sB').setAttribute('aria-pressed',s==='B');$('sT').setAttribute('aria-pressed',s==='T');heim()}
+$('sB').onclick=()=>seite('B');$('sT').onclick=()=>seite('T');
+function heim(){const m=S(),P=PTS[side];const M=mark();if(P.length){const p=P[P.length-1];ox=cxOf(side,P.length-1)-M[0]/Z;oy=p[1]-M[1]/Z}else{const st=startPt();ox=st[0]-M[0]/Z;oy=st[1]-M[1]/Z}zeichne()}
+function startPt(){const m=S(),o=OVI[side];try{const c=document.createElement('canvas');c.width=o.width;c.height=o.height;const g=c.getContext('2d');g.drawImage(o,0,0);const d=g.getImageData(0,0,c.width,c.height).data,f=m.w/c.width;let bx=c.width/2,by=1e9;for(let x=Math.round(c.width*0.1);x<c.width*0.9;x+=2){for(let y=0;y<c.height;y++){const k=(y*c.width+x)*4;if((d[k]+d[k+1]+d[k+2])/3<200){if(y<by){by=y;bx=x}break}}}if(by<1e9)return[bx*f,by*f+20]}catch(e){}return[m.w/2,20]}
+
+// ---------- Finger ----------
+const ptr=new Map();let gest=null,lpT=null;
+cv.addEventListener('pointerdown',e=>{if(!S())return;cv.setPointerCapture(e.pointerId);ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});schliesseBlatt();
+ if(ptr.size===1){gest={k:'pan',x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,t:performance.now(),tl:performance.now(),moved:0};clearTimeout(lpT);lpT=setTimeout(()=>{if(gest&&gest.k==='pan'&&gest.moved<8){const r=cv.getBoundingClientRect();const p=toI(gest.x0-r.left,gest.y0-r.top);const i=ringAt(p);if(i>=0){gest=null;ringMenu(i)}}},550)}
+ else if(ptr.size===2){clearTimeout(lpT);const[a,b]=[...ptr.values()];const r=cv.getBoundingClientRect();gest={k:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y),z0:Z,mx:(a.x+b.x)/2-r.left,my:(a.y+b.y)/2-r.top,p:toI((a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top)}}});
+cv.addEventListener('pointermove',e=>{if(!ptr.has(e.pointerId)||!gest)return;ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(gest.k==='pan'&&ptr.size===1){const now=performance.now(),dx=e.clientX-gest.x,dy=e.clientY-gest.y,dt=Math.max(1,now-gest.tl);gest.moved=Math.max(gest.moved,Math.hypot(e.clientX-gest.x0,e.clientY-gest.y0));
+  const v=Math.hypot(dx,dy)/dt;const gain=v<0.12?0.25:(v<0.35?0.6:1);   // langsam ziehen = fein
+  ox-=dx*gain/Z;oy-=dy*gain/Z;gest.x=e.clientX;gest.y=e.clientY;gest.tl=now;zeichne()}
+ else if(gest.k==='pinch'&&ptr.size===2){const[a,b]=[...ptr.values()];const r=cv.getBoundingClientRect();const d=Math.hypot(a.x-b.x,a.y-b.y);const mx=(a.x+b.x)/2-r.left,my=(a.y+b.y)/2-r.top;Z=Math.max(ZMIN,Math.min(ZMAX,gest.z0*d/gest.d0));ox=gest.p[0]-mx/Z;oy=gest.p[1]-my/Z;zeichne()}});
+function ende(e){if(!ptr.has(e.pointerId))return;ptr.delete(e.pointerId);clearTimeout(lpT);if(ptr.size===0)gest=null;else if(ptr.size===1&&gest&&gest.k==='pinch'){const[a]=[...ptr.values()];gest={k:'pan',x:a.x,y:a.y,x0:a.x,y0:a.y,t:performance.now(),tl:performance.now(),moved:99}}}
+cv.addEventListener('pointerup',ende);cv.addEventListener('pointercancel',ende);
+cv.addEventListener('wheel',e=>{e.preventDefault();if(!S())return;const r=cv.getBoundingClientRect();if(e.ctrlKey){setZoom(Z*Math.pow(1.0025,-e.deltaY),e.clientX-r.left,e.clientY-r.top);return}ox+=e.deltaX/Z;oy+=e.deltaY/Z;zeichne()},{passive:false});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ---------- Tasten unten ----------
+function halten(btn,fn){let t1=null,t2=null;const stop=()=>{clearTimeout(t1);clearInterval(t2)};btn.addEventListener('pointerdown',e=>{e.preventDefault();fn();t1=setTimeout(()=>{t2=setInterval(fn,70)},400)});['pointerup','pointerleave','pointercancel'].forEach(k=>btn.addEventListener(k,stop))}
+halten($('bHoch'),()=>{if(S()){oy-=1/Z;zeichne()}});
+halten($('bRunter'),()=>{if(S()){oy+=1/Z;zeichne()}});
+$('setzen').onclick=setzen;$('bZur').onclick=zurueck;$('bKette').onclick=kette;
+$('zin').onclick=()=>{const M=mark();setZoom(Z*1.5,M[0],M[1])};$('zout').onclick=()=>{const M=mark();setZoom(Z/1.5,M[0],M[1])};
+
+$('bRing').onclick=()=>{if(!S())return;const M=mark();let i=ringAt(toI(M[0],M[1]));if(i<0){const R=rings(side);if(R.length)i=R[R.length-1].i}if(i>=0)ringMenu(i);else info('Noch kein Ring gemessen')};
+$('bModusEnde').onclick=()=>{mode=null;pend=null;modusAnzeige();info('Einfügen beendet');zeichne()};
+function modusAnzeige(){$('modus').style.display=(mode||pend)?'block':'none';$('bModusEnde').textContent=pend?'Neu setzen abbrechen':'Einfügen beenden'}
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.key===' '||e.key==='Enter'){e.preventDefault();setzen()}else if(e.key==='ArrowUp'){oy-=1/Z;zeichne()}else if(e.key==='ArrowDown'){oy+=1/Z;zeichne()}else if(e.key==='ArrowLeft'){ox-=1/Z;zeichne()}else if(e.key==='ArrowRight'){ox+=1/Z;zeichne()}else if(e.key==='Backspace')zurueck();else if(e.key==='Escape')kette();else if(e.key==='+')$('zin').click();else if(e.key==='-')$('zout').click()});
+
+
+// ---------- Fertig ----------
+function zusammenfassung(){return['B','T'].filter(x=>META.seiten[x]).map(x=>{const r=rings(x);let mm=0;r.forEach(q=>mm+=Math.abs(q.b[1]-q.a[1])*MM(x));return(x==='B'?($('sB').textContent):'Diskant')+': '+r.length+' Ringe, '+mm.toFixed(2)+' mm'})}
+function fhText(x){const m=META.seiten[x],P=PTS[x],K=KOM[x],mmpx=25.4/(m.dpi||1200),RAND=0.5*(m.dpi||1200)/25.4;const w=[],cm=[];let sw=0,ns=0;
+ const sy=xx=>{const L=m.saite;if(!L)return null;const X=L.x,Y=L.y,n=X.length-1;let k=0;while(k<n-1&&xx>X[k+1])k++;return Y[k]+(Y[k+1]-Y[k])*(xx-X[k])/((X[k+1]-X[k])||1)};
+ for(let i=1;i<P.length;i++){if(P[i][2]){sw++;continue}const a=P[i-1],b=P[i];w.push(Math.abs(b[1]-a[1])*mmpx);let t=K.filter(k=>Math.abs(k.p[0]-b[0])<0.01&&Math.abs(k.p[1]-b[1])<0.01).map(k=>k.text).join(' ');
+  if(m.saite){const ys=sy(cxOf(x,i));if(Math.max(a[1],b[1])>ys-RAND){t=(t?t+' / ':'')+'Saitenregion';ns++}}cm.push(t)}
+ const v=w.map((q,k)=>String(Math.round(q*100))+(cm[k]?';;'+cm[k]:''));
+ const hdr=['HEADER:','DateEnd='+v.length,'KeyCode='+m.name,'Unit=1/100 mm','Length='+v.length,'Location=','Species=','Project=Gemessen mit LignoWolfi Handy, '+Math.round(m.dpi||1200)+' dpi','DataType=Ringwidth','SeriesType=Single curve','DataFormat=Tree','Dated=Undated','DateBegin=1','DATA:Single'];
+ const txt=hdr.concat(v).join('\r\n')+'\r\n';const u=new Uint8Array(txt.length);for(let i=0;i<txt.length;i++){const c=txt.charCodeAt(i);u[i]=c<256?c:63}   // Windows-1252 (Umlaute bleiben)
+ return{file:new File([u],m.name+'.fh',{type:'text/plain'}),n:v.length,mm:w.reduce((a,b)=>a+b,0),sw,ns}}
+let FOTOS=[];
+$('fotos').onchange=e=>{FOTOS=[...e.target.files];e.target.value='';const el=$('fAnz');if(el)el.textContent=FOTOS.length?FOTOS.length+' Foto(s) dabei':'keine Fotos'};
+$('bFertig').onclick=()=>{if(!META){info('Erst Bilder öffnen');return}const z=zusammenfassung();FOTOS=[];
+ blatt.innerHTML=`<div class="t">${KEY.replace(/[<&]/g,'')}</div><p style="margin:0 2px 10px;line-height:1.5">${z.join('<br>')}<br><span style="color:var(--leise)">Die Messung ist im iPhone gespeichert${gespeichert?' (zuletzt '+gespeichert.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+')':''}.</span></p>
+ <div class="g"><button id="fFoto">Fotos vom Instrument anhängen</button><span id="fAnz" style="align-self:center;color:var(--leise)">keine Fotos</span>
+ <button id="fOk" style="background:var(--akzent);color:#fff;border-color:var(--akzent)">.fh senden</button><button id="fWeiter">Weiter messen</button></div>`;
+ blatt.style.display='block';$('fWeiter').onclick=schliesseBlatt;$('fFoto').onclick=()=>$('fotos').click();
+ $('fOk').onclick=()=>{const fh=['B','T'].filter(x=>META.seiten[x]&&PTS[x].length>1).map(fhText);if(!fh.length){info('Noch keine Ringe gemessen');return}
+  const files=fh.map(f=>f.file).concat(FOTOS);let geteilt=null;
+  try{if(navigator.canShare&&navigator.canShare({files})){geteilt=navigator.share({files,title:KEY,text:'Jahrringmessung '+KEY+' (LignoWolfi Handy)'})}}catch(e){geteilt=null}
+  if(!geteilt){for(const f of files){const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove()}geteilt=Promise.resolve()}
+  geteilt.then(()=>{fertigFlag=true;save();blatt.innerHTML=`<div class="t">Gesendet ✓</div><p style="margin:0 2px 10px;line-height:1.5">${fh.map(f=>f.file.name+': '+f.n+' Ringe, '+f.mm.toFixed(2)+' mm, Spurwechsel '+f.sw+', Saitenregion '+f.ns).join('<br>')}${FOTOS.length?'<br>+ '+FOTOS.length+' Foto(s)':''}</p><div class="g"><button id="fZu">OK</button></div>`;$('fZu').onclick=schliesseBlatt}).catch(e=>{if(e&&e.name==='AbortError')info('Senden abgebrochen – Messung bleibt gespeichert');else info('Senden nicht möglich: '+(e&&e.message||e))})}};
+
+// ---------- Ring-Menue ----------
+const blatt=$('blatt');let delArm=false;
+function schliesseBlatt(){blatt.style.display='none';delArm=false}
+function ringMenu(i){const R=rings(side);const k=R.findIndex(r=>r.i===i);if(k<0)return;const r=R[k];const mm=Math.abs(r.b[1]-r.a[1])*MM(side);const P=PTS[side];const old=KOM[side].find(q=>q.p[0]===P[i][0]&&q.p[1]===P[i][1]);
+ blatt.innerHTML=`<div class="t">Ring ${k} · ${mm.toFixed(2)} mm${old?' · „'+old.text.replace(/[<&]/g,'')+'“':''}</div><div class="g">
+ <button data-a="del">Ring löschen</button><button data-a="move">Grenze neu setzen</button>
+ <button data-a="insE">Ring davor einfügen</button><button data-a="insL">Ring danach einfügen</button>
+ <button data-a="t2">in 2 teilen</button><button data-a="t3">in 3 teilen</button>
+ <button data-a="kom">Kommentar</button><button data-a="saite">Saitenlinie ${showS?'aus':'ein'}</button>
+ <button data-a="spur" class="rot">Ganze Spur löschen</button><button data-a="zu">Schließen</button></div>`;
+ blatt.style.display='block';blatt.querySelectorAll('button').forEach(b=>b.onclick=()=>aktion(b.dataset.a,i,b))}
+function aktion(a,i,btn){const P=PTS[side];if(a==='zu'){schliesseBlatt();return}
+ if(a==='saite'){showS=!showS;schliesseBlatt();zeichne();return}
+ if(a==='spur'){if(!delArm){delArm=true;btn.textContent='Wirklich ganze Spur löschen?';return}merke('Spur löschen');PTS[side]=[];KOM[side]=[];open[side]=true;schliesseBlatt();save();info('Spur gelöscht');zeichne();return}
+ if(a==='kom'){const old=KOM[side].find(q=>q.p[0]===P[i][0]&&q.p[1]===P[i][1]);blatt.innerHTML=`<div class="t">Kommentar zu diesem Ring</div><input id="kx" placeholder="z. B. +1" value="${old?old.text.replace(/"/g,'&quot;'):''}"><div class="g"><button id="kok">Speichern</button><button id="kab">Abbrechen</button></div>`;
+  const x=$('kx');x.focus();$('kab').onclick=schliesseBlatt;$('kok').onclick=()=>{const t=x.value.trim();merke('Kommentar');KOM[side]=KOM[side].filter(q=>!(q.p[0]===P[i][0]&&q.p[1]===P[i][1]));if(t)KOM[side].push({p:[P[i][0],P[i][1]],text:t});schliesseBlatt();save();info(t?'Kommentar gespeichert':'Kommentar entfernt')};return}
+ schliesseBlatt();
+ if(a==='del'){merke('Ring löschen');P.splice(i,1);info('Ring gelöscht');save();zeichne();return}
+ if(a==='move'){pend={kind:'move',i};modusAnzeige();ox=cxOf(side,i)-mark()[0]/Z;oy=P[i][1]-mark()[1]/Z;info('Grenze unter die Marke schieben, dann „Setzen“');zeichne();return}
+ if(a==='insE'){mode={kind:'ins',at:i,anchor:P[i-1]};modusAnzeige();info('Ring davor: jedes „Setzen“ fügt eine Grenze ein');zeichne();return}
+ if(a==='insL'){mode={kind:'ins',at:i+1,anchor:P[i]};modusAnzeige();info('Ring danach: jedes „Setzen“ fügt eine Grenze ein');zeichne();return}
+ if(a[0]==='t'){merke('In '+a[1]+' teilen');const n=+a[1],A=P[i-1],B=P[i],add=[];for(let q=1;q<n;q++)add.push([B[0],Math.round((A[1]+(B[1]-A[1])*q/n)*10)/10]);P.splice(i,0,...add);info('In '+n+' geteilt. Grenzen über „Grenze neu setzen“ anpassen.');save();zeichne()}}
+
+
+// ---------- Dendro-Bilder direkt oeffnen (JPG aus OneDrive), Kacheln entstehen im iPhone ----------
+let MODE='zip';const MEM=new Map();
+async function holeBlob(n,type){return MODE==='zip'?zipBlob(n,type):(MEM.get(n)||null)}
+function canvasBlob(c){return new Promise(r=>c.toBlob(r,'image/jpeg',0.9))}
+function dpiAusJpeg(u8){try{if(u8[0]!==0xFF||u8[1]!==0xD8)return null;let i=2;while(i<u8.length-14){if(u8[i]!==0xFF)return null;const m=u8[i+1],L=(u8[i+2]<<8)|u8[i+3];if(m===0xE0&&String.fromCharCode(u8[i+4],u8[i+5],u8[i+6],u8[i+7])==='JFIF'){const un=u8[i+11],xd=(u8[i+12]<<8)|u8[i+13];if(un===1&&xd>0)return xd;if(un===2&&xd>0)return xd*2.54;return null}if(m===0xDA)return null;i+=2+L}}catch(e){}return null}
+function nameInfo(n){const b=n.replace(/\.[^.]+$/,'');const m=b.match(/^(.*?\d{8})(BT|B|T)(\d?)_(.+)$/i);if(!m)return{key:b,seite:'B',bt:false,kurz:b};const t=m[2].toUpperCase();return{key:m[1]+(m[3]?'-'+m[3]:'')+'_'+m[4],seite:t==='T'?'T':'B',bt:t==='BT',kurz:b}}
+function findeSaite(im,s,dpi){const W=im.width,H=im.height,PX=dpi/25.4;const steg=W>12000?Math.round(W*7100/14173):Math.round(W*3600/8504);const bx=s==='T'?W-steg:steg;
+ const band=Math.min(H,Math.round(45*PX)),y0=H-band,Fk=4,cw=Math.ceil(W/Fk);const c=document.createElement('canvas');c.width=cw;c.height=band;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(im,0,y0,W,band,0,0,cw,band);
+ const D=g.getImageData(0,0,cw,band).data;c.width=c.height=0;const pts=[];const win=Math.round(3*PX),hw=Math.max(1,Math.round(12/Fk));
+ for(let X=40;X<W-40;X+=60){const cc=Math.round(X/Fk);const col=new Float64Array(band);for(let y=0;y<band;y++){let t=0,n=0;for(let k=-hw;k<=hw;k++){const xx=cc+k;if(xx<0||xx>=cw)continue;const q=(y*cw+xx)*4;t+=D[q]*.299+D[q+1]*.587+D[q+2]*.114;n++}col[y]=t/n}
+  const cs=new Float64Array(band+1);for(let y=0;y<band;y++)cs[y+1]=cs[y]+col[y];const bg=y=>{const a=Math.max(0,y-(win>>1)),b=Math.min(band,y+(win>>1)+1);return(cs[b]-cs[a])/(b-a)};
+  for(let y=10;y<band-10;y++){const r=col[y]-bg(y);if(r>45&&col[y]>150){let mx=true;for(let k=-10;k<=10;k++)if(col[y+k]-bg(y+k)>r){mx=false;break}if(mx){pts.push([X,y0+y]);break}}}}
+ const fit=P=>{if(P.length<2)return null;let best=null;for(let it=0;it<400;it++){const i=Math.floor(Math.random()*P.length),j=Math.floor(Math.random()*P.length);if(P[i][0]===P[j][0])continue;const a=(P[j][1]-P[i][1])/(P[j][0]-P[i][0]),b=P[i][1]-a*P[i][0];let n=0;for(const p of P)if(Math.abs(p[1]-(a*p[0]+b))<12)n++;if(!best||n>best.n)best={n,a,b}}if(!best)return null;
+  const M=P.filter(p=>Math.abs(p[1]-(best.a*p[0]+best.b))<12);const mx=M.reduce((t,p)=>t+p[0],0)/M.length,my=M.reduce((t,p)=>t+p[1],0)/M.length;let sxy=0,sxx=0;for(const p of M){sxy+=(p[0]-mx)*(p[1]-my);sxx+=(p[0]-mx)**2}const a=sxx?sxy/sxx:0;return{a,b:my-a*mx}};
+ const L=fit(pts.filter(p=>p[0]<bx)),R=fit(pts.filter(p=>p[0]>=bx));if(!L&&!R)return null;const l=L||R,r=R||L;const yb=((l.a*bx+l.b)+(r.a*bx+r.b))/2;return{x:[0,bx,W-1],y:[Math.round(l.b),Math.round(yb),Math.round(r.a*(W-1)+r.b)],auto:true}}
+async function bildZuKacheln(f,s,nr,gesamt){const u8=new Uint8Array(await f.slice(0,65536).arrayBuffer());const dpi=dpiAusJpeg(u8)||1200;
+ info('Bild '+nr+'/'+gesamt+' wird gelesen …');const big=await createImageBitmap(f);const W=big.width,H=big.height,TS=1024;const ni=nameInfo(f.name);
+ const m={w:W,h:H,dpi,name:ni.kurz,saite:null,stufen:[]};let n=0;const tot=Math.ceil(W/TS)*Math.ceil(H/TS)+Math.ceil(W/2/TS)*Math.ceil(H/2/TS);
+ for(const[lv,fac]of[[0,1],[1,2]]){const LW=Math.ceil(W/fac),LH=Math.ceil(H/fac),cols=Math.ceil(LW/TS),rows=Math.ceil(LH/TS);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const tw=Math.min(TS,LW-c*TS),th=Math.min(TS,LH-r*TS);const k=document.createElement('canvas');k.width=tw;k.height=th;const g=k.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+   g.drawImage(big,c*TS*fac,r*TS*fac,Math.min(tw*fac,W-c*TS*fac),Math.min(th*fac,H-r*TS*fac),0,0,tw,th);MEM.set(s+'/'+lv+'/'+c+'_'+r+'.jpg',await canvasBlob(k));k.width=k.height=0;n++;if(n%6===0)info('Bild '+nr+'/'+gesamt+' wird vorbereitet … '+Math.round(100*n/tot)+' %')}
+  m.stufen.push({f:fac,cols,rows})}
+ const ow=900,oh=Math.round(H*ow/W);const oc=document.createElement('canvas');oc.width=ow;oc.height=oh;oc.getContext('2d').drawImage(big,0,0,ow,oh);MEM.set(s+'/ov.jpg',await canvasBlob(oc));oc.width=oc.height=0;m.ov=[ow,oh];
+ try{m.saite=findeSaite(big,s,dpi)}catch(e){}
+ try{big.close&&big.close()}catch(e){}return{m,ni}}
+async function oeffneBilder(fs){try{fs=fs.filter(f=>/\.jpe?g$/i.test(f.name)||/jpeg/.test(f.type)).slice(0,2);if(!fs.length){info('Bitte ein Dendro-Bild (…B_….jpg oder …T_….jpg) oder eine Handy-ZIP wählen');return}
+  MODE='mem';MEM.clear();cache.clear();F=null;MAP=null;const seiten={};let key=null,bt=false;
+  for(let i=0;i<fs.length;i++){const ni0=nameInfo(fs[i].name);const s=seiten[ni0.seite]?(ni0.seite==='B'?'T':'B'):ni0.seite;const{m,ni}=await bildZuKacheln(fs[i],s,i+1,fs.length);seiten[s]=m;key=key||ni.key;bt=bt||ni.bt}
+  META={key,version:1,ts:1024,seiten};KEY=key;await merkeKacheln();$('start').hidden=true;await nachLaden();
+  if(fs.length===1&&!bt)info(KEY+' – nur '+(META.seiten.B?'Bass':'Diskant')+' geladen. Tipp: in „Dateien“ über „Auswählen“ beide Bilder B und T gleichzeitig wählen.')}
+ catch(err){info('Bild lässt sich nicht öffnen: '+(err&&err.message||err)+(/memory|Speicher/i.test(String(err))?' – Bild zu groß für das iPhone':''))}}
+
+// ---------- Start ----------
+new ResizeObserver(resize).observe($('feld'));resize();
+async function merkeKacheln(){try{await iput('kacheln',KEY,{meta:META,blobs:Object.fromEntries(MEM)})}catch(e){info('Bilder konnten nicht im iPhone gespeichert werden – Messen geht trotzdem')}}
+async function ausSpeicher(k){try{const r=await iget('kacheln',k);if(!r){info('Bilder nicht mehr im iPhone – bitte neu öffnen');return}MODE='mem';MEM.clear();for(const[n,b]of Object.entries(r.blobs))MEM.set(n,b);META=r.meta;KEY=k;F=null;MAP=null;$('start').hidden=true;await nachLaden()}catch(e){info('Öffnen fehlgeschlagen: '+e.message)}}
+async function liste(){try{const lose=(await iall('lose')).sort((a,b)=>b.t-a.t);const mitBild=new Set(await ikeys('kacheln'));const box=$('lose');if(!lose.length&&!mitBild.size)return;box.innerHTML='';
+  const keys=[...new Set(lose.map(v=>v.key).concat([...mitBild]))];
+  for(const k of keys){const v=lose.find(x=>x.key===k)||{key:k,ringe:{},t:0};const el=document.createElement('div');el.className='los';
+   el.innerHTML='<div style="min-width:0"><b></b><br><span></span></div><div style="display:flex;gap:6px;flex:0 0 auto"><button class="o">Öffnen</button><button class="d">Löschen</button></div>';
+   el.querySelector('b').textContent=k;el.querySelector('span').textContent=Object.entries(v.ringe||{}).map(([s,c])=>(s==='B'?'Bass ':'Diskant ')+c).join(' · ')+(v.fertig?' · gesendet':'')+(v.t?' · '+new Date(v.t).toLocaleDateString('de-DE'):'');
+   const o=el.querySelector('.o');if(!mitBild.has(k)){o.disabled=true;o.title='Bilder neu öffnen'}o.onclick=()=>ausSpeicher(k);
+   let arm=false;const d=el.querySelector('.d');d.onclick=async()=>{if(!arm){arm=true;d.textContent='Wirklich?';setTimeout(()=>{arm=false;d.textContent='Löschen'},3000);return}await idel('lose',k).catch(()=>{});await idel('kacheln',k).catch(()=>{});el.remove()};
+   box.appendChild(el)}}catch(e){}}
+$('bOpen').onclick=()=>{if(META&&$('start').hidden){$('start').hidden=false;liste()}else $('datei').click()};
+liste();
+if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
+</body></html>
