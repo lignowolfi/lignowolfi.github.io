@@ -251,7 +251,8 @@ function fhText(x){const m=META.seiten[x],P=PTS[x],K=KOM[x],mmpx=25.4/(m.dpi||12
  for(let i=1;i<P.length;i++){if(P[i][2]){sw++;continue}const a=P[i-1],b=P[i];w.push(Math.abs(b[1]-a[1])*mmpx);let t=K.filter(k=>Math.abs(k.p[0]-b[0])<0.01&&Math.abs(k.p[1]-b[1])<0.01).map(k=>k.text).join(' ');
   if(m.saite){const ys=sy(cxOf(x,i));if(Math.max(a[1],b[1])>ys-RAND){t=(t?t+' / ':'')+'Saitenregion';ns++}}cm.push(t)}
  const v=w.map((q,k)=>String(Math.round(q*100))+(cm[k]?';;'+cm[k]:''));
- const hdr=['HEADER:','DateEnd='+v.length,'KeyCode='+m.name,'Unit=1/100 mm','Length='+v.length,'Location=','Species=','Project=Gemessen mit LignoWolfi Handy, '+Math.round(m.dpi||1200)+' dpi','DataType=Ringwidth','SeriesType=Single curve','DataFormat=Tree','Dated=Undated','DateBegin=1','DATA:Single'];
+ const ri=META.richtung&&META.richtung[x];if(ri==='umgekehrt')v.reverse();
+ const hdr=['HEADER:','DateEnd='+v.length,'KeyCode='+m.name,'Unit=1/100 mm','Length='+v.length,'Location=','Species=','Project=Gemessen mit LignoWolfi Handy, '+Math.round(m.dpi||1200)+' dpi'+(META.quelle?', '+META.quelle+', untere Breite '+META.breite+' mm':'')+(ri?', Richtung (Kunde): '+({normal:'jüngster Ring an der Fuge',umgekehrt:'jüngster Ring am Rand (umgedreht gespeichert)','?':'weiß nicht'}[ri]||ri):''),'DataType=Ringwidth','SeriesType=Single curve','DataFormat=Tree','Dated=Undated','DateBegin=1','DATA:Single'];
  const txt=hdr.concat(v).join('\r\n')+'\r\n';const u=new Uint8Array(txt.length);for(let i=0;i<txt.length;i++){const c=txt.charCodeAt(i);u[i]=c<256?c:63}   // Windows-1252 (Umlaute bleiben)
  return{file:new File([u],m.name+'.fh',{type:'text/plain'}),n:v.length,mm:w.reduce((a,b)=>a+b,0),sw,ns}}
 let FOTOS=[];
@@ -341,4 +342,5 @@ if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.service
 </script>
 <script src="dendro.js"></script>
 <script src="vgl.js"></script>
+<script src="foto.js"></script>
 </body></html>
