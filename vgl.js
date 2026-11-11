@@ -8,7 +8,7 @@ const RDB=new Promise((res,rej)=>{try{const r=indexedDB.open('lignowolfi-ref',1)
 function rtx(mode,fn){return RDB.then(d=>new Promise((res,rej)=>{const tx=d.transaction('db',mode);const r=fn(tx.objectStore('db'));let out;if(r)r.onsuccess=()=>{out=r.result};tx.oncomplete=()=>res(out);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error)}))}
 const rget=k=>rtx('readonly',o=>o.get(k)),rput=(k,v)=>rtx('readwrite',o=>o.put(v,k)),rdel=k=>rtx('readwrite',o=>o.delete(k));
 
-let DB=null,WK=null,VGL=null,PROBE=null,TAB='B',JAHR=null,LAEUFT=false,STAND='',GELADEN=false,LADEN=null;
+let LBLX=null,DB=null,WK=null,VGL=null,PROBE=null,TAB='B',JAHR=null,LAEUFT=false,STAND='',GELADEN=false,LADEN=null;
 
 // Panel und Datei-Auswahl einhängen
 const css=document.createElement('style');css.textContent=`
@@ -35,6 +35,7 @@ const css=document.createElement('style');css.textContent=`
 const panel=document.createElement('div');panel.id='vglH';q('feld').appendChild(panel);
 const plot=document.createElement('canvas');plot.id='vglPlotH';document.body.appendChild(plot);
 const fin=document.createElement('input');fin.type='file';fin.id='refdatei';fin.style.display='none';document.body.appendChild(fin);
+const fhin=document.createElement('input');fhin.type='file';fhin.multiple=true;fhin.style.display='none';document.body.appendChild(fhin);
 const btn=document.createElement('button');btn.id='bVgl';btn.textContent='Vergleich';btn.title='Schnellvergleich mit deiner Datenbank';q('oben').appendChild(btn);
 
 function breitenH(x){if(!META||!META.seiten[x])return null;const P=PTS[x],mm=MM(x),w=[];for(let i=1;i<P.length;i++){if(P[i][2])continue;w.push(Math.abs(P[i][1]-P[i-1][1])*mm)}return w}
@@ -53,14 +54,28 @@ fin.onchange=async()=>{const f=fin.files&&fin.files[0];fin.value='';if(!f)return
    d.geladen=new Date().toISOString();d.datei=f.name;await rput('referenzen',d);DB=d;LADEN=Promise.resolve();VGL=null;GELADEN=false;worker().postMessage({typ:'refs',refs:DB.datiert.concat(DB.undatiert)});zeigen()}
   catch(e){if(st)st.textContent='';alert(e.message||String(e))}};
 
+function fhZuordnen(liste){// liste: [{name,text}] -> {B,T,lbl:{B,T},fehler}
+ const ser=[];for(const f of liste){let s=[];try{s=Dendro.parseFh(f.text)}catch(e){}
+  if(!s.length)continue;const r=s[0];const key=String(r.name&&r.name!=='fh'?r.name:f.name.replace(/\.fh$/i,''));ser.push({key,datei:f.name,vals:r.vals,start:r.start})}
+ if(!ser.length)return{fehler:'Keine lesbare .fh-Kurve gefunden (mind. 20 Ringe).'};
+ const seite=s=>{const m=(s.key+' '+s.datei).match(/\d{6,8}(BT|B|T)(?![a-z])/i);return m?m[1].toUpperCase():null};
+ const out={B:null,T:null,lbl:{B:'',T:''}};const rest=[];
+ for(const s of ser){const k=seite(s);if(k==='T'&&!out.T){out.T=s}else if((k==='B'||k==='BT')&&!out.B){out.B=s}else rest.push(s)}
+ for(const s of rest){if(!out.B)out.B=s;else if(!out.T)out.T=s}
+ const r={B:null,T:null,lbl:{B:'',T:''}};for(const k of['B','T'])if(out[k]){r[k]=out[k].vals.map(v=>v>0?v:NaN);r.lbl[k]=out[k].key+(out[k].start?' (datiert '+out[k].start+'–'+(out[k].start+out[k].vals.length-1)+')':'')}
+ return r}
+
+fhin.onchange=async()=>{const fs=[...(fhin.files||[])];fhin.value='';if(!fs.length)return;const l=[];for(const f of fs)l.push({name:f.name,text:await f.text()});
+ if(typeof Dendro==='undefined'){alert('Programmteil fehlt – App neu öffnen');return}const r=fhZuordnen(l);if(r.fehler){alert(r.fehler);return}
+ LBLX={B:r.lbl.B||'Kurve 1',T:r.lbl.T||'Kurve 2'};const B=r.B,T=r.T;LAEUFT=true;STAND='';TAB=B?'B':'T';PROBE={B,T,key:''};const lx=LBLX;zeigen();LBLX=lx;worker().postMessage({typ:'vgl',B,T,minUeb:Math.max(20,+q('vMinH').value||40)})};
 function zeigen(){const nd=DB?DB.datiert.length:0,nu=DB?DB.undatiert.length:0;
- let h=`<div class="kopf"><b>Schnellvergleich</b><button id="vStartH">Vergleichen</button><button id="vZuH">Schließen</button></div>
+ let h=`<div class="kopf"><b>Schnellvergleich</b><button id="vStartH">Messung vergleichen</button><button id="vZuH">Schließen</button></div>
  <div class="db">${DB?`Datenbank im iPhone: <b>${nd}</b> datierte, <b>${nu}</b> undatierte Kurven<br><span style="color:#777">vom PC ${esc(new Date(DB.exportiert||DB.erstellt).toLocaleString('de-DE'))} · ${esc(DB.datei||'')}</span>`:'<b>Noch keine Datenbank im iPhone.</b><br>Am PC in LignoWolfi im Schnellvergleich „Fürs Handy speichern…“ wählen. Dann hier die Datei aus OneDrive laden. Sie bleibt nur in diesem iPhone.'}
- <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button id="vLadH">${DB?'Datenbank neu laden':'Datenbank laden'}</button>${DB?'<button id="vDelH">Aus iPhone löschen</button>':''}<label>min. Überl. <input id="vMinH" type="number" inputmode="numeric" value="${esc(localStorage.getItem('lwh_minueb')||40)}" style="width:52px;font-size:16px"></label><span id="vEinH"></span></div></div>`;
+ <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><button id="vFhH">.fh-Datei vergleichen…</button><button id="vLadH">${DB?'Datenbank neu laden':'Datenbank laden'}</button>${DB?'<button id="vDelH">Aus iPhone löschen</button>':''}<label>min. Überl. <input id="vMinH" type="number" inputmode="numeric" value="${esc(localStorage.getItem('lwh_minueb')||40)}" style="width:52px;font-size:16px"></label><span id="vEinH"></span></div></div>`;
  if(LAEUFT)h+=`<section><span id="vStandH">${esc(STAND||'vergleiche …')}</span></section>`;
  else if(VGL){const o=VGL.out,bt=VGL.bt;h+='<section>';
   if(bt)h+=`<div class="hinweis">Bass ↔ Diskant: Diskant beginnt ${bt.lage>=0?bt.lage+' Ringe nach':(-bt.lage)+' Ringe vor'} dem Bass · tBP ${bt.tbp.toFixed(1)} · tHo ${bt.tho.toFixed(1)} · GLK ${bt.glk.toFixed(0)} % · Überl. ${bt.ueb}${bt.tbp<4?' – zu schwach, keine Mittelkurve':''}</div>`;
-  h+='<div class="tabs">'+['B','T','M'].filter(k=>o[k]).map(k=>`<button class="vTabH" data-k="${k}" aria-pressed="${TAB===k}">${{B:'Bass',T:'Diskant',M:'Mittelkurve'}[k]} (${o[k].ringe})</button>`).join('')+`<span style="color:#777;align-self:center">${(VGL.ms/1000).toFixed(1)} s</span></div>`;
+  h+='<div class="tabs">'+['B','T','M'].filter(k=>o[k]).map(k=>`<button class="vTabH" data-k="${k}" aria-pressed="${TAB===k}">${esc((LBLX||{B:'Bass',T:'Diskant'})[k]||'Mittelkurve')} (${o[k].ringe})</button>`).join('')+`<span style="color:#777;align-self:center">${(VGL.ms/1000).toFixed(1)} s</span></div>`;
   const r=o[TAB]||o.B||o.T;if(r){
    h+=`<h3>Count (Endjahre unter den besten 100)</h3><table><tr><th>Endjahr</th><th>Count</th><th>bester tBP</th></tr>`+r.count.map(c=>`<tr class="cnt ${c.count>=10?'gut':''} ${JAHR===c.endjahr?'wahl':''}" data-j="${c.endjahr}"><td>${c.endjahr}</td><td>${c.count}</td><td>${c.bestT.toFixed(1)}</td></tr>`).join('')+'</table><div class="hinweis" style="margin-top:4px">Endjahr antippen: unten nur diese Treffer.</div>';
    const dl=JAHR!=null?r.datiert.filter(e=>e.endjahr===JAHR):r.datiert.slice(0,30);
@@ -74,8 +89,9 @@ function zeigen(){const nd=DB?DB.datiert.length:0,nu=DB?DB.undatiert.length:0;
  q('vLadH').onclick=()=>fin.click();
  const del=q('vDelH');if(del)del.onclick=async()=>{if(!confirm('Datenbank aus diesem iPhone löschen? (Deine Messungen bleiben.)'))return;await rdel('referenzen');DB=null;VGL=null;if(WK){WK.terminate();WK=null}LADEN=null;zeigen()};
  q('vMinH').onchange=e=>{try{localStorage.setItem('lwh_minueb',e.target.value)}catch(_){}};
+ q('vFhH').onclick=()=>{if(!DB){alert('Erst die Datenbank laden');return}fhin.click()};
  q('vStartH').onclick=()=>{if(!DB){alert('Erst die Datenbank laden');return}const B=breitenH('B'),T=breitenH('T');if(!(B&&B.length>=20)&&!(T&&T.length>=20)){alert('Zu wenige Ringe gemessen (mind. 20)');return}
-  LAEUFT=true;STAND='';TAB=B&&B.length>=20?'B':'T';PROBE={B,T,key:typeof KEY!=='undefined'?KEY:''};zeigen();worker().postMessage({typ:'vgl',B,T,minUeb:Math.max(20,+q('vMinH').value||40)})};
+  LAEUFT=true;STAND='';LBLX=null;TAB=B&&B.length>=20?'B':'T';PROBE={B,T,key:typeof KEY!=='undefined'?KEY:''};zeigen();worker().postMessage({typ:'vgl',B,T,minUeb:Math.max(20,+q('vMinH').value||40)})};
  panel.querySelectorAll('.vTabH').forEach(b=>b.onclick=()=>{TAB=b.dataset.k;JAHR=null;zeigen()});
  panel.querySelectorAll('tr.cnt').forEach(tr=>tr.onclick=()=>{const j=+tr.dataset.j;JAHR=JAHR===j?null:j;zeigen()});
  const al=q('vAlleH');if(al)al.onclick=()=>{JAHR=null;zeigen()};
@@ -109,9 +125,9 @@ function kurven(sp){if(!DB||!VGL)return;const refs=DB.datiert.concat(DB.undatier
  g.strokeStyle='#999';g.strokeRect(L,T,pw,ph);
  const linie=(arr,off,mul,col,lw)=>{g.strokeStyle=col;g.lineWidth=lw;g.beginPath();let pen=false;for(let i=0;i<arr.length;i++){const v=arr[i]*mul;if(!(v>0)){pen=false;continue}const xx=X(i-off),yy=Y(v);if(pen)g.lineTo(xx,yy);else g.moveTo(xx,yy);pen=true}g.stroke()};
  linie(R,d,f,'#1f4fbf',1.2);linie(P,0,1,'#d01818',1.4);
- const lbl={B:'Bass',T:'Diskant',M:'Mittelkurve'}[k];
+ const lbl=(LBLX||{B:'Bass',T:'Diskant'})[k]||'Mittelkurve';
  g.textAlign='left';g.fillStyle='#000';g.font='bold '+(fs+2)+'px -apple-system,Segoe UI,sans-serif';g.fillText(lbl+' ↔ '+sp.dataset.k,6,16);
- g.font=fs+'px -apple-system,Segoe UI,sans-serif';g.fillStyle='#333';g.fillText(sp.dataset.w,6,31);g.fillStyle='#d01818';g.fillText('deine Kurve: '+(typeof KEY!=='undefined'&&KEY?KEY+' ':'')+lbl+(dat?' · '+yr(0)+'–'+yr(pl-1):' · '+pl+' Ringe'),6,45);
+ g.font=fs+'px -apple-system,Segoe UI,sans-serif';g.fillStyle='#333';g.fillText(sp.dataset.w,6,31);g.fillStyle='#d01818';g.fillText('deine Kurve: '+(!LBLX&&typeof KEY!=='undefined'&&KEY?KEY+' ':'')+lbl+(dat?' · '+yr(0)+'–'+yr(pl-1):' · '+pl+' Ringe'),6,45);
  g.fillStyle='#1f4fbf';const ref='Referenz: '+(r.datei||r.name)+' · '+(r.ordner||'–')+' · '+(dat?r.start+'–'+(r.start+rl-1):rl+' Ringe')+(Math.abs(Math.log10(f))>0.05?' · Höhe angepasst':'');g.fillText(ref.length>110?ref.slice(0,108)+'…':ref,6,59);
  if(sp.dataset.i){g.fillStyle='#1a4d80';const t=sp.dataset.i;g.fillText(t.length>90?t.slice(0,88)+'…':t,6,73)}
  g.textAlign='right';g.fillStyle='#d01818';g.fillText('— '+lbl,W-Rt-70,16);g.fillStyle='#1f4fbf';g.fillText('— Ref.',W-Rt,16)}
