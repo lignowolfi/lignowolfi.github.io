@@ -261,8 +261,16 @@ function fhText(x){const m=META.seiten[x],P=PTS[x],K=KOM[x],mmpx=MM(x),RAND=0.5*
  return{file:new File([u],m.name+'.fh',{type:'text/plain'}),n:v.length,mm:w.reduce((a,b)=>a+b,0),sw,ns}}
 let FOTOS=[];
 $('fotos').onchange=e=>{FOTOS=[...e.target.files];e.target.value='';const el=$('fAnz');if(el)el.textContent=FOTOS.length?FOTOS.length+' Foto(s) dabei':'keine Fotos'};
+// Prüfung vor dem Absenden: Ringzahl, Bass gegen Diskant, auffällige Ringbreiten (ändert nichts an der Messung)
+function breitenP(x){if(!META||!META.seiten[x])return null;const P=PTS[x],mm=MM(x),w=[];for(let i=1;i<P.length;i++){if(P[i][2])continue;w.push(Math.abs(P[i][1]-P[i-1][1])*mm)}return w.length?w:null}
+function pruefHtml(){if(typeof Dendro==='undefined')return'';const B=breitenP('B'),T=breitenP('T');const r=Dendro.pruefung(B,T);const z=[],N={B:'Bass',T:'Diskant'};
+ for(const k of['B','T'])if(r.n[k])z.push((r.n[k]<50?'⚠️ ':'✓ ')+N[k]+': '+r.n[k]+' Ringe'+(r.n[k]<50?' – für eine Datierung meist zu wenig (mind. 50)':''));
+ if(r.bt)z.push((r.bt.tbp>=4?'✓ Bass und Diskant passen zusammen':'⚠️ Bass und Diskant passen nicht sicher zusammen – fehlt irgendwo ein Ring oder ist einer zu viel?')+' (tBP '+r.bt.tbp.toFixed(1)+')');
+ for(const a of r.auff.slice(0,6))z.push('⚠️ '+N[a.s]+' Ring '+a.i+': '+(a.typ==='breit'?a.q.toFixed(1)+'× so breit wie die Nachbarn – Grenze übersehen?':'sehr schmal – Grenze doppelt gesetzt?'));
+ if(r.auff.length>6)z.push('… und '+(r.auff.length-6)+' weitere auffällige Ringe');
+ return z.length?`<p style="margin:0 2px 12px;line-height:1.55;font-size:14px"><b>Prüfung</b><br>${z.join('<br>')}</p>`:''}
 $('bFertig').onclick=()=>{if(!META){info('Erst Bilder öffnen');return}const z=zusammenfassung();FOTOS=[];
- blatt.innerHTML=`<div class="t">${KEY.replace(/[<&]/g,'')}</div><p style="margin:0 2px 10px;line-height:1.5">${z.join('<br>')}<br><span style="color:var(--leise)">Die Messung ist im iPhone gespeichert${gespeichert?' (zuletzt '+gespeichert.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+')':''}.</span></p>
+ blatt.innerHTML=`<div class="t">${KEY.replace(/[<&]/g,'')}</div><p style="margin:0 2px 10px;line-height:1.5">${z.join('<br>')}<br><span style="color:var(--leise)">Die Messung ist im iPhone gespeichert${gespeichert?' (zuletzt '+gespeichert.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+')':''}.</span></p>${pruefHtml()}
  <div class="g"><button id="fFoto">Fotos vom Instrument anhängen</button><span id="fAnz" style="align-self:center;color:var(--leise)">keine Fotos</span>
  <button id="fOk" style="background:var(--akzent);color:#fff;border-color:var(--akzent)">.fh senden</button><button id="fWeiter">Weiter messen</button></div>`;
  blatt.style.display='block';$('fWeiter').onclick=schliesseBlatt;$('fFoto').onclick=()=>$('fotos').click();

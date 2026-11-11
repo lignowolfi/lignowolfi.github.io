@@ -25,6 +25,7 @@ const css=document.createElement('style');css.textContent=`
 #vglH td.l,#vglH th.l{text-align:left;white-space:normal}
 #vglH tr.gut td{background:#eef7ee}
 #vglH tr.cnt.wahl td{background:#cce4f7;font-weight:600}
+#vglH button.abs{font-size:11px;min-height:26px;padding:0 6px;margin-left:4px}
 #vglH .kn{font-family:Menlo,monospace;font-size:13px;color:#000;text-decoration:underline dotted #999;touch-action:none;-webkit-touch-callout:none;display:inline-block;padding:2px 0}
 #vglH .in{display:block;color:#1a4d80;font-size:11.5px;margin-top:1px}
 #vglH .hinweis{color:#555;line-height:1.45}
@@ -95,12 +96,19 @@ function zeigen(){const nd=DB?DB.datiert.length:0,nu=DB?DB.undatiert.length:0;
  panel.querySelectorAll('.vTabH').forEach(b=>b.onclick=()=>{TAB=b.dataset.k;JAHR=null;zeigen()});
  panel.querySelectorAll('tr.cnt').forEach(tr=>tr.onclick=()=>{const j=+tr.dataset.j;JAHR=JAHR===j?null:j;zeigen()});
  const al=q('vAlleH');if(al)al.onclick=()=>{JAHR=null;zeigen()};
+ panel.querySelectorAll('button.abs').forEach(b=>b.onclick=()=>abschn(b));
  panel.querySelectorAll('.kn').forEach(sp=>{sp.addEventListener('pointerdown',ev=>{ev.preventDefault();try{sp.setPointerCapture(ev.pointerId)}catch(_){}kurven(sp)});sp.addEventListener('contextmenu',ev=>ev.preventDefault())});
 }
 function zeile(e,w,letzte){const n=DB&&DB.namen&&DB.namen[e.name]||[];const ins=n.filter(x=>!x.startsWith('Dendro'));const z=ins.length?ins:n;
  const inst=z.length?z[0].replace(/\s+\[/,' [')+(z.length>1?' (+'+(z.length-1)+')':''):'';
- return `<tr class="${e.tbp>=6?'gut':''}"><td class="l"><span class="kn" data-ri="${e.ri}" data-d="${e.d}" data-k="${esc(e.name)}" data-i="${esc(inst)}" data-w="tBP ${e.tbp.toFixed(1)} · tHo ${e.tho.toFixed(1)} · GLK ${e.glk.toFixed(0)} % · Überl. ${e.ueb} · ${esc(w)}">${esc(e.name)}</span>${e.chrono?' (Chr.)':''}${inst?`<span class="in">${esc(inst)}</span>`:''}</td><td>${e.tbp.toFixed(1)}</td><td>${e.tho.toFixed(1)}</td><td>${e.glk.toFixed(0)}</td><td>${e.ueb}</td><td>${letzte}</td></tr>`}
+ return `<tr class="${e.tbp>=6?'gut':''}"><td class="l"><span class="kn" data-ri="${e.ri}" data-d="${e.d}" data-k="${esc(e.name)}" data-i="${esc(inst)}" data-w="tBP ${e.tbp.toFixed(1)} · tHo ${e.tho.toFixed(1)} · GLK ${e.glk.toFixed(0)} % · Überl. ${e.ueb} · ${esc(w)}">${esc(e.name)}</span>${e.chrono?' (Chr.)':''} <button class="abs" data-ri="${e.ri}" data-d="${e.d}" data-k="${esc(e.name)}">Abschnitte</button>${inst?`<span class="in">${esc(inst)}</span>`:''}</td><td>${e.tbp.toFixed(1)}</td><td>${e.tho.toFixed(1)}</td><td>${e.glk.toFixed(0)}</td><td>${e.ueb}</td><td>${letzte}</td></tr>`}
 
+function abschn(b){if(!DB||!VGL||typeof Dendro==='undefined')return;const refs=DB.datiert.concat(DB.undatiert);const r=refs[+b.dataset.ri];if(!r)return;
+ const d=+b.dataset.d,k=TAB;const P=k==='M'?(VGL.bt&&VGL.bt.mittel):(PROBE&&PROBE[k]);if(!P)return;const a=Dendro.abschnitte(P,r,d);const dat=r.start!=null;
+ const z=a.map(x=>{const spr=x.best!==0&&x.best!=null&&x.tbest-(x.t0||0)>=1.5;return `<tr style="${spr?'background:#fde8e6;font-weight:600':''}"><td class="l">${dat?(r.start+d+x.von)+'–'+(r.start+d+x.bis)+'<br>':''}Ring ${x.von}–${x.bis}</td><td>${x.best==null?'–':(x.best>0?'+':'')+x.best}</td><td class="l">${spr?(x.best>0?'davor fehlt vermutlich ein Ring':'davor ist vermutlich ein Ring zu viel'):'passt'}</td></tr>`}).join('');
+ let el=document.getElementById('absH');if(!el){el=document.createElement('div');el.id='absH';el.style.cssText='position:fixed;left:6px;right:6px;top:calc(env(safe-area-inset-top,0px) + 50px);max-height:75vh;overflow:auto;background:#fff;border:1px solid #888;box-shadow:0 4px 18px rgba(0,0,0,.35);z-index:61;padding:10px;font-size:13px';document.body.appendChild(el)}
+ el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">Abschnittsprüfung gegen ${esc(b.dataset.k)}</b><button id="absZuH">Schließen</button></div><table style="width:100%;border-collapse:collapse"><tr><th class="l">Abschnitt</th><th>Verschiebung</th><th class="l">Hinweis</th></tr>${z}</table>`;
+ el.style.display='block';document.getElementById('absZuH').onclick=()=>{el.style.display='none'}}
 function weg(){plot.style.display='none'}
 addEventListener('pointerup',weg);addEventListener('pointercancel',weg);addEventListener('blur',weg);
 document.addEventListener('visibilitychange',weg);

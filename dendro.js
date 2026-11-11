@@ -95,6 +95,21 @@ function btMittel(b,t,minUeb){minUeb=minUeb||30;const B=vorbereiten({vals:b}),T=
   for(let i=s0;i<e0;i++){const x=i>=0&&i<b.length?b[i]:NaN,y=i-d>=0&&i-d<t.length?t[i-d]:NaN;const w=[x,y].filter(z=>z>0);m.push(w.length?w.reduce((a,c)=>a+c,0)/w.length:NaN)}
   return{lage:d,tbp:best.tbp,tho:best.tho,glk:best.glk,ueb:best.ueb,mittel:m}}
 
-const api={parseTucsonRwl,parseTucsonCrn,parseFh,parseDatei,vorbereiten,vergleichLage,schnellvergleich,btMittel,tWert,korr,glk};
+
+// Abschnittsprüfung: Kurve in Abschnitte zerlegen und jeden Abschnitt einzeln um ±maxS Jahre um die Gesamtlage verschieben.
+// Bei sauberer Messung liegen alle Abschnitte bei Verschiebung 0; ein Sprung zeigt einen fehlenden oder überzähligen Ring.
+function abschnitte(probeVals,ref,d,opt){opt=Object.assign({seg:40,step:20,maxS:3,min:25},opt||{});const R=ref._v||vorbereiten(ref),out=[];const n=probeVals.length;
+  for(let i=0;i<n;i+=opt.step){const e=Math.min(n,i+opt.seg);if(e-i<opt.min)break;const P=vorbereiten({vals:probeVals.slice(i,e)});let b0=null,best=null;
+    for(let s=-opt.maxS;s<=opt.maxS;s++){const v=vergleichLage(P,R,d+i+s);if(!v||v.ueb<opt.min)continue;if(s===0)b0=v;if(!best||v.tbp>best.tbp)best=Object.assign({s},v)}
+    out.push({von:i,bis:e-1,t0:b0?b0.tbp:null,best:best?best.s:null,tbest:best?best.tbp:null});if(e===n)break}
+  return out}
+// Prüfung vor dem Absenden: Ringzahl, Bass gegen Diskant, auffällige Ringbreiten
+function pruefung(B,T,opt){opt=Object.assign({minRinge:50,zuBreit:2.2,zuSchmal:0.35},opt||{});const r={n:{B:B?B.length:0,T:T?T.length:0},bt:null,auff:[]};
+  if(B&&T&&B.length>=20&&T.length>=20)r.bt=btMittel(B,T,Math.min(30,Math.min(B.length,T.length)-5));
+  for(const[k,v]of[['B',B],['T',T]]){if(!v)continue;for(let i=0;i<v.length;i++){const nb=[];for(let j=Math.max(0,i-3);j<=Math.min(v.length-1,i+3);j++)if(j!==i&&v[j]>0)nb.push(v[j]);if(nb.length<3||!(v[i]>0))continue;
+    nb.sort((a,b)=>a-b);const med=nb[nb.length>>1],q=v[i]/med;if(q>=opt.zuBreit)r.auff.push({s:k,i,q,typ:'breit'});else if(q<=opt.zuSchmal)r.auff.push({s:k,i,q,typ:'schmal'})}}
+  return r}
+
+const api={abschnitte,pruefung,parseTucsonRwl,parseTucsonCrn,parseFh,parseDatei,vorbereiten,vergleichLage,schnellvergleich,btMittel,tWert,korr,glk};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Dendro=api;
 })(typeof self!=='undefined'?self:this);
