@@ -138,13 +138,13 @@ function fuellen(m,w,h){const N=w*h,aus=new Uint8Array(N),st=new Int32Array(N);l
  while(sp){const r=st[--sp];const x=r%w,y=(r-x)/w;if(x>0)push(r-1);if(x<w-1)push(r+1);if(y>0)push(r-w);if(y<h-1)push(r+w)}
  const o=new Uint8Array(N);for(let p=0;p<N;p++)o[p]=aus[p]?0:1;return o}
 // f-Loch: dunkle Fläche, die den Bildrand nicht berührt und länglich ist; die größte davon
-function fLoch(m,w,h){const N=w*h,lab=new Int32Array(N),st=new Int32Array(N);let nl=0,best=null;
+function fLoch(m,w,h){const N=w*h,lab=new Int32Array(N),st=new Int32Array(N);let nl=0;const kand=[];
  for(let p=0;p<N;p++){if(!m[p]||lab[p])continue;nl++;let sp=0,n=0,rand=false,sx=0,sy=0,sxx=0,syy=0,sxy=0;st[sp++]=p;lab[p]=nl;
   while(sp){const r=st[--sp];n++;const x=r%w,y=(r-x)/w;sx+=x;sy+=y;sxx+=x*x;syy+=y*y;sxy+=x*y;if(x===0||y===0||x===w-1||y===h-1)rand=true;
    for(const z of[x>0?r-1:-1,x<w-1?r+1:-1,y>0?r-w:-1,y<h-1?r+w:-1])if(z>=0&&m[z]&&!lab[z]){lab[z]=nl;st[sp++]=z}}
   if(rand||n<20)continue;const mx=sx/n,my=sy/n,cxx=sxx/n-mx*mx,cyy=syy/n-my*my,cxy=sxy/n-mx*my;const tr=cxx+cyy,de=Math.sqrt(Math.max(0,(cxx-cyy)**2/4+cxy*cxy));
-  const el=Math.sqrt((tr/2+de)/Math.max(1e-6,tr/2-de));const sc=n*Math.min(el,6);if(el>1.8&&(!best||sc>best.sc))best={id:nl,n,sc}}
- if(!best)return null;const o=new Uint8Array(N);for(let p=0;p<N;p++)if(lab[p]===best.id)o[p]=1;return{m:o,n:best.n}}
+  const el=Math.sqrt((tr/2+de)/Math.max(1e-6,tr/2-de));const sc=n*Math.min(el,6);if(el>1.8)kand.push({n,sc,F:[mx,my]})}
+ kand.sort((a,b)=>b.sc-a.sc);return kand.slice(0,2).filter(k=>k.n>=kand[0].n*0.3)}
 function auswerten(bild){
  const f=600/Math.max(bild.width,bild.height),w=Math.round(bild.width*f),h=Math.round(bild.height*f);
  const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(bild,0,0,w,h);const d=g.getImageData(0,0,w,h).data;c.width=c.height=0;
@@ -157,44 +157,60 @@ function auswerten(bild){
   const gx=(L[p-w+1]+2*L[p+1]+L[p+w+1])-(L[p-w-1]+2*L[p-1]+L[p+w-1]),gy=(L[p+w-1]+2*L[p+w]+L[p+w+1])-(L[p-w-1]+2*L[p-w]+L[p-w+1]);jxx+=gx*gx;jyy+=gy*gy;jxy+=gx*gy}
  const phi=0.5*Math.atan2(2*jxy,jxx-jyy);let ax=[-Math.sin(phi),Math.cos(phi)];if(ax[1]<0)ax=[-ax[0],-ax[1]];const qu=[ax[1],-ax[0]];
  // f-Loch = größte dunkle Fläche in der Geige
- let dk=new Uint8Array(N);for(let p=0;p<N;p++)if(geige[p]&&V[p]<0.22)dk[p]=1;const fl=fLoch(dk,w,h);if(!fl||fl.n<N*0.0015)return{fehler:'Kein f-Loch gefunden'};
- let sx=0,sy=0;for(let p=0;p<N;p++)if(fl.m[p]){sx+=p%w;sy+=(p/w)|0}const F=[sx/fl.n,sy/fl.n];
+ let dk=new Uint8Array(N);for(let p=0;p<N;p++)if(geige[p]&&V[p]<0.14)dk[p]=1;const fls=fLoch(dk,w,h).filter(k=>k.n>=N*0.0015);if(!fls.length)return{fehler:'Kein f-Loch gefunden'};
+ const out=[];for(const fl of fls){const r=geo(fl.F);if(r&&!r.fehler)out.push(r)}if(!out.length)return{fehler:'Rand nicht gefunden'};
+ // ganze Decke: Abstand der beiden f-Löcher ≈ 0,79 × halbe untere Breite (vorläufiger Maßstab, unabhängig vom Hintergrund)
+ if(out.length===2&&out[0].layout!==out[1].layout){const sp=Math.hypot(out[0].F[0]-out[1].F[0],out[0].F[1]-out[1].F[1]);const M=[(out[0].F[0]+out[1].F[0])/2,(out[0].F[1]+out[1].F[1])/2];for(const r of out){r.hw=sp/0.79;const e=r.hw*1.04;r.rim=[M[0]-r.Y[0]*e,M[1]-r.Y[1]*e]}}
+ return{liste:out};
+ function geo(F){
  // Rand: von der f-Loch-Linie quer nach außen, bis das Holz endet (kurze Unterbrechungen wie Saiten zählen nicht)
  const weite=(px,py,dx,dy)=>{for(let k=1;k<2000;k++){const x=Math.round(px+dx*k),y=Math.round(py+dy*k);if(x<0||y<0||x>=w||y>=h)return null;
-   if(!geige[y*w+x]){let ok=true;for(let j=1;j<15;j++){const xx=Math.round(px+dx*(k+j)),yy=Math.round(py+dy*(k+j));if(xx<0||yy<0||xx>=w||yy>=h)break;if(geige[yy*w+xx]){ok=false;break}}if(ok)return k}}return null};
+   if(!geige[y*w+x]){let n=0,gg=0,ok=true;for(let j=1;;j++){const xx=Math.round(px+dx*(k+j)),yy=Math.round(py+dy*(k+j));if(xx<0||yy<0||xx>=w||yy>=h)break;n++;if(geige[yy*w+xx]){gg++;if(j<15)ok=false}}if(ok&&gg<=0.1*n)return k}}return null};   // Rand nur, wenn danach (fast) kein Holz mehr kommt – nicht am Griffbrett
  const res={1:[],'-1':[]};for(const sg of[1,-1])for(let t=-Math.round(0.45*Math.max(w,h));t<=Math.round(0.45*Math.max(w,h));t+=3){const px=F[0]+ax[0]*t,py=F[1]+ax[1]*t;if(px<0||py<0||px>=w||py>=h)continue;const k=weite(px,py,qu[0]*sg,qu[1]*sg);if(k!=null)res[sg].push([t,k])}
  const med=a=>{if(a.length<10)return 1e9;const s=a.map(z=>z[1]).sort((x,y)=>x-y);return s[s.length>>1]};
  const rs=med(res[1])<=med(res['-1'])?1:-1;const R=res[rs];if(R.length<10)return{fehler:'Rand nicht gefunden'};
  let tw=0,kw=0;for(const[t,k]of R)if(k>kw){kw=k;tw=t}
- let o=0,no=0,u=0,nu=0;for(const[t,k]of R){if(t>0){o+=k;no++}else{u+=k;nu++}}const schnecke=(no?o/no:1e9)<(nu?u/nu:1e9)?1:-1;   // C-Bügel = Rand kommt näher
+ // C-Bügel = tiefste Einbuchtung des Randes (auf beiden Seiten weiter außen); die Schnecke liegt von der breitesten Stelle aus in Richtung C-Bügel
+ const Rs=R.slice().sort((x,y)=>x[0]-y[0]),K=Rs.map((z,i)=>{let a=0,n=0;for(let j=Math.max(0,i-3);j<=Math.min(Rs.length-1,i+3);j++){a+=Rs[j][1];n++}return a/n});
+ const lm=[],rm=[];let m1=-1e9;for(let i=0;i<K.length;i++){m1=Math.max(m1,K[i]);lm.push(m1)}let m2=-1e9;for(let i=K.length-1;i>=0;i--){m2=Math.max(m2,K[i]);rm[i]=m2}
+ let ic=-1,tief=0;for(let i=0;i<K.length;i++){const dd=Math.min(lm[i],rm[i])-K[i];if(dd>tief){tief=dd;ic=i}}
+ let schnecke;if(ic>=0&&tief>0.1*kw)schnecke=Rs[ic][0]>tw?1:-1;
+ else{let o=0,no=0,u=0,nu=0;for(const[t,k]of R){if(t>0){o+=k;no++}else{u+=k;nu++}}schnecke=(no?o/no:1e9)<(nu?u/nu:1e9)?1:-1}
  // Zielachsen: Y nach unten = vom Rand weg; X senkrecht dazu (reine Drehung, nie gespiegelt)
  const Y=[-qu[0]*rs,-qu[1]*rs],X=[Y[1],-Y[0]];
  const sv=[ax[0]*schnecke,ax[1]*schnecke];const layout=(X[0]*sv[0]+X[1]*sv[1])>0?'B':'T';   // Schnecke rechts = Bassbild
  const rim=[(F[0]+ax[0]*tw+qu[0]*rs*kw)/f,(F[1]+ax[1]*tw+qu[1]*rs*kw)/f],Ff=[F[0]/f,F[1]/f];
- return{X,Y,rim,F:Ff,kw:kw/f,layout}}
+ return{X,Y,rim,F:Ff,kw:kw/f,layout}}}
 
 const FOTOS2_LBL={B:'Bass',T:'Diskant'};
 async function fotoDa(blob,seite){
  W0.innerHTML='<div class="ansage ok" id="fAns">Foto wird ausgewertet …</div>';
  let bild;try{bild=await createImageBitmap(blob)}catch(e){alert('Foto lässt sich nicht lesen');kamera(seite);return}
  let r=null;try{r=auswerten(bild)}catch(e){r={fehler:String(e&&e.message||e)}}
- if(!r||r.fehler){alert((r&&r.fehler?r.fehler+'. ':'Ich finde die Decke auf dem Foto nicht sicher. ')+'Bitte noch einmal fotografieren: Rand der unteren Backe, f-Loch und Steg, Decke füllt das Bild.');kamera(seite);return}
- if(r.layout!==seite&&!confirm('Das Foto sieht nach der '+SN[r.layout]+' aus, nicht nach der '+SN[seite]+'. Trotzdem als '+SN[seite]+' nehmen?')){kamera(seite);return}
- // vorläufiger Maßstab: Rand bis f-Loch ≈ halbe halbe Breite. Der echte Maßstab kommt nach dem Messen aus der halben unteren Breite.
- const hw=r.kw/0.5,mmpx=(+A.breite/2)/hw;
- const Wp=Math.round(180/mmpx);const xsteg=r.layout==='B'?76.2/mmpx:Wp-76.2/mmpx;
- // Höhe: so weit das Foto reicht, höchstens 1,6 × halbe Breite
- let Hp=Math.round(1.6*hw);for(let y=10;y<Hp;y+=10){const sx=r.rim[0]+r.Y[0]*y,sy=r.rim[1]+r.Y[1]*y;const fx=r.F[0]+r.X[0]*0,fy=0;if(sx<0||sy<0||sx>=bild.width||sy>=bild.height){Hp=y;break}}
- // Ursprung: Steg-Spalte durch das f-Loch, Zeile 0 durch den breitesten Randpunkt
- const dot=(a,b)=>a[0]*b[0]+a[1]*b[1];const X=r.X,Y=r.Y;
- const ox=dot(r.F,X)-xsteg,oy=dot(r.rim,Y);   // Zielkoordinate = (q·X - ox, q·Y - oy)
- const c=document.createElement('canvas');c.width=Wp;c.height=Hp;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,Wp,Hp);g.imageSmoothingQuality='high';
- g.setTransform(X[0],Y[0],X[1],Y[1],-ox,-oy);g.drawImage(bild,0,0);g.setTransform(1,0,0,1,0,0);
- const b=await new Promise(res=>c.toBlob(res,'image/jpeg',0.93));c.width=c.height=0;try{bild.close&&bild.close()}catch(e){}
- FOTOS2[seite]={foto:blob,bild:b,dpi:Math.max(50,Math.round(25.4/mmpx))};
- if(seite==='B'){kamera('T');return}
+ if(!r||r.fehler){alert((r&&r.fehler?r.fehler+'. ':'Ich finde die Decke auf dem Foto nicht sicher. ')+'Bitte noch einmal: Rand der unteren Backe, f-Loch und Steg, Decke füllt das Bild.');kamera(seite);return}
+ const L=r.liste;let mein=L.find(z=>z.layout===seite);
+ if(!mein){if(!confirm('Das Foto sieht nach der '+SN[L[0].layout]+' aus, nicht nach der '+SN[seite]+'. Trotzdem als '+SN[seite]+' nehmen?')){kamera(seite);return}mein=L[0]}
+ FOTOS2[seite]={foto:blob,...await seitenBild(bild,mein,seite)};
+ // ganze Decke auf einem Foto: die andere Seite gleich mit
+ const ander=seite==='B'?'T':'B',zweit=L.find(z=>z!==mein&&z.layout===ander);
+ if(zweit&&!FOTOS2[ander]){FOTOS2[ander]={foto:blob,...await seitenBild(bild,zweit,ander)}}
+ try{bild.close&&bild.close()}catch(e){}
+ if(!FOTOS2.T){kamera('T');return}
+ if(!FOTOS2.B){kamera('B');return}
  await fertigBauen();
 }
+async function seitenBild(bild,r,seite){
+ // vorläufiger Maßstab: Rand bis f-Loch ≈ halbe halbe Breite. Der echte Maßstab kommt nach dem Messen aus der halben unteren Breite.
+ const hw=r.hw||r.kw/0.5,mmpx=(+A.breite/2)/hw;
+ const Wp=Math.round(180/mmpx);const xsteg=r.layout==='B'?76.2/mmpx:Wp-76.2/mmpx;
+ // Höhe: so weit das Foto reicht, höchstens 1,3 × halbe Breite
+ let Hp=Math.round(1.3*hw);for(let y=10;y<Hp;y+=10){const sx=r.rim[0]+r.Y[0]*y,sy=r.rim[1]+r.Y[1]*y;if(sx<0||sy<0||sx>=bild.width||sy>=bild.height){Hp=y;break}}
+ const dot=(a,b)=>a[0]*b[0]+a[1]*b[1];const X=r.X,Y=r.Y;
+ const ox=dot(r.F,X)-xsteg,oy=dot(r.rim,Y);
+ const c=document.createElement('canvas');c.width=Wp;c.height=Hp;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,Wp,Hp);g.imageSmoothingQuality='high';
+ g.setTransform(X[0],Y[0],X[1],Y[1],-ox,-oy);g.drawImage(bild,0,0);g.setTransform(1,0,0,1,0,0);
+ const b=await new Promise(res=>c.toBlob(res,'image/jpeg',0.93));c.width=c.height=0;
+ return{bild:b,dpi:Math.max(50,Math.round(25.4/mmpx))}}
 async function fertigBauen(){
  W0.innerHTML='<div class="ansage ok" id="fAns">Bilder werden vorbereitet …</div>';
  const nr=nummer();const kurz=A.kurz.replace(/[^A-Za-z0-9ÄÖÜäöüß]+/g,'').slice(0,24)||'Instrument';const files=[];
