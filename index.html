@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#eef0f2"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" href="icon-192.png">
 <style>
 /* Werkzeug im Ligno-Stil: hellgraue Leisten, Bild füllt alles, feste Messmarke in der Mitte. Bewusst nur ein (helles) Erscheinungsbild. */
-:root{--leiste:#eef0f2;--rand:#b9bec4;--text:#1d2125;--leise:#5d656e;--akzent:#1f6fd1;--akzent2:#d8e6f8;--bildgrund:#7d8084;--marke:#e0261b;--saite:#16b316;--grund:#e4e6e9;color-scheme:light;
+:root{--leiste:#eef0f2;--rand:#b9bec4;--text:#1d2125;--leise:#5d656e;--akzent:#1f6fd1;--akzent2:#d8e6f8;--bildgrund:#7d8084;--marke:#ffffff;--saite:#16b316;--grund:#e4e6e9;color-scheme:light;
  --font:-apple-system,"SF Pro Text","Segoe UI",Roboto,Arial,sans-serif}
 html,body{height:100%}
 body{margin:0;background:var(--grund);color:var(--text);font:14px var(--font);overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -146,7 +146,7 @@ function draw(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#7d8084';cx.fillRect(
  const mi=toI(M[0],M[1]);let anc=null,ax=0;if(mode&&mode.kind==='ins'){anc=mode.anchor;ax=cxOf(side,Math.max(0,mode.at-1))}else if(open[side]&&P.length){anc=P[P.length-1];ax=cxOf(side,P.length-1)}
  if(anc&&!pend){const a=toS(ax-TW/2,anc[1]),b=toS(ax+TW/2,mi[1]);cx.strokeStyle='#5a5a5a';cx.lineWidth=1;cx.strokeRect(a[0],Math.min(a[1],b[1]),b[0]-a[0],Math.abs(b[1]-a[1]))}
  // Marke: zwei waagerechte Striche links und rechts der Spur, Mitte frei; kleiner Pfeil links
- const hw=TW*Z/2;cx.strokeStyle=pend?'#e08a00':'#e0261b';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(M[0]-hw-34,M[1]);cx.lineTo(M[0]-hw-3,M[1]);cx.moveTo(M[0]+hw+3,M[1]);cx.lineTo(M[0]+hw+34,M[1]);cx.stroke();
+ const hw=TW*Z/2;cx.strokeStyle=pend?'#e08a00':'#ffffff';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(M[0]-hw-34,M[1]);cx.lineTo(M[0]-hw-3,M[1]);cx.moveTo(M[0]+hw+3,M[1]);cx.lineTo(M[0]+hw+34,M[1]);cx.stroke();
  cx.fillStyle=cx.strokeStyle;cx.beginPath();cx.moveTo(M[0]-hw-3,M[1]);cx.lineTo(M[0]-hw-11,M[1]-5);cx.lineTo(M[0]-hw-11,M[1]+5);cx.closePath();cx.fill();
  stat()}
 let gespeichert=null,fertigFlag=false;

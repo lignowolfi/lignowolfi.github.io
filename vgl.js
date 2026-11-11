@@ -49,7 +49,7 @@ async function dbStart(){if(LADEN)return LADEN;LADEN=(async()=>{try{DB=await rge
 
 btn.onclick=async()=>{if(typeof schliesseBlatt==='function')schliesseBlatt();await dbStart();panel.style.display='block';zeigen()};
 fin.onchange=async()=>{const f=fin.files&&fin.files[0];fin.value='';if(!f)return;const st=q('vEinH');if(st)st.textContent='lese '+f.name+' …';
-  try{const t=await f.text();const d=JSON.parse(t);if(d.format!=='lignowolfi-referenzen'||!Array.isArray(d.datiert))throw new Error('Das ist keine LignoWolfi-Datenbank. Am PC in LignoWolfi im Schnellvergleich „Fürs Handy speichern…“ benutzen.');
+  try{const buf=new Uint8Array(await f.arrayBuffer());let t;if(buf[0]===0x1f&&buf[1]===0x8b){if(typeof DecompressionStream==='undefined')throw new Error('Dieses iPhone kann gepackte Dateien nicht öffnen – bitte iOS aktualisieren.');t=await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text()}else t=new TextDecoder().decode(buf);const d=JSON.parse(t);if(d.format!=='lignowolfi-referenzen'||!Array.isArray(d.datiert))throw new Error('Das ist keine LignoWolfi-Datenbank. Am PC in LignoWolfi im Schnellvergleich „Fürs Handy speichern…“ benutzen.');
    d.geladen=new Date().toISOString();d.datei=f.name;await rput('referenzen',d);DB=d;LADEN=Promise.resolve();VGL=null;GELADEN=false;worker().postMessage({typ:'refs',refs:DB.datiert.concat(DB.undatiert)});zeigen()}
   catch(e){if(st)st.textContent='';alert(e.message||String(e))}};
 
