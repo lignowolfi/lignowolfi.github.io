@@ -218,8 +218,10 @@ async function fertigBauen(){
  const richt={B:A.richtung.B,T:A.richtung.T},fotos={B:FOTOS2.B&&FOTOS2.B.foto,T:FOTOS2.T&&FOTOS2.T.foto};
  zu();await oeffneBilder(files);
  if(META){META.richtung=richt;META.breite=+A.breite;META.quelle='Handy-Foto';META.halbfoto=true;for(const s of['B','T'])if(fotos[s])MEM.set('foto_'+s+'.jpg',fotos[s]);await merkeKacheln();
-  info(KEY+' – oben am Rand anfangen und bis zur Mitte (Fuge) messen')}
+  info(KEY+' – oben am Rand anfangen und bis zur Mitte (Fuge) messen');zeigeAnleitung()}
 }
+// Vor dem Messen: Symbolbild, wo die Pfeilspitze hin muss
+function zeigeAnleitung(){W0.style.display='block';W0.innerHTML=`<div class="seite" style="display:flex;flex-direction:column;justify-content:center;gap:18px"><img src="pfeil_tafel.jpg" alt="" style="width:100%;border-radius:8px"><div class="knopfzeile"><button id="fLos" class="haupt">Messen</button></div></div>`;q('fLos').onclick=()=>{W0.style.display='none';W0.innerHTML=''}}
 function nummer(){const d=new Date(),p=n=>String(n).padStart(2,'0');return String(d.getFullYear()).slice(2)+p(d.getMonth()+1)+p(d.getDate())+p(d.getHours())}
 function setzeDpi(u8,dpi){if(u8[0]!==0xFF||u8[1]!==0xD8)return u8;if(u8[2]===0xFF&&u8[3]===0xE0&&u8[6]===0x4A&&u8[7]===0x46){u8[13]=1;u8[14]=dpi>>8;u8[15]=dpi&255;u8[16]=dpi>>8;u8[17]=dpi&255;return u8}
  const app0=[0xFF,0xE0,0,16,0x4A,0x46,0x49,0x46,0,1,1,1,dpi>>8,dpi&255,dpi>>8,dpi&255,0,0];const o=new Uint8Array(u8.length+app0.length);o.set(u8.subarray(0,2),0);o.set(app0,2);o.set(u8.subarray(2),2+app0.length);return o}
