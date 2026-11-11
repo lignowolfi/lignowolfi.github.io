@@ -93,7 +93,7 @@ const $=id=>document.getElementById(id);
 const cv=$('cv'), cx=cv.getContext('2d');
 // Handy-Foto: Maßstab aus der halben unteren Breite = gemessene Strecke vom Rand bis zur Mitte (sobald genug gemessen ist)
 const MM=s=>{const d=25.4/(META&&META.seiten[s]?META.seiten[s].dpi:1200);if(!(META&&META.halbfoto&&META.breite))return d;const P=PTS[s];if(!P||P.length<11)return d;
- let t=P[0][1];for(let i=1;i<P.length;i++)if(!P[i][2])t+=Math.abs(P[i][1]-P[i-1][1]);return t>0?(META.breite/2)/t:d};
+ let t=P[0][1];for(let i=1;i<P.length;i++)if(!P[i][2])t+=Math.abs(P[i][1]-P[i-1][1]);return t>0?(META.ganz?META.breite:META.breite/2)/t:d};
 function S(){return META&&META.seiten[side]}
 function info(t){$('itext').textContent=t}
 
@@ -256,7 +256,7 @@ function fhText(x){const m=META.seiten[x],P=PTS[x],K=KOM[x],mmpx=MM(x),RAND=0.5*
   if(m.saite){const ys=sy(cxOf(x,i));if(Math.max(a[1],b[1])>ys-RAND){t=(t?t+' / ':'')+'Saitenregion';ns++}}cm.push(t)}
  const v=w.map((q,k)=>String(Math.round(q*100))+(cm[k]?';;'+cm[k]:''));
  const ri=META.richtung&&META.richtung[x];if(ri==='umgekehrt')v.reverse();
- const hdr=['HEADER:','DateEnd='+v.length,'KeyCode='+m.name,'Unit=1/100 mm','Length='+v.length,'Location=','Species=','Project=Gemessen mit LignoWolfi Handy, '+Math.round(25.4/mmpx)+' dpi'+(META.quelle?', '+META.quelle+', untere Breite '+META.breite+' mm'+(META.halbfoto?', Maßstab: Strecke Rand–Mitte = halbe untere Breite':''):'')+(ri?', Richtung (Kunde): '+({normal:'jüngster Ring an der Fuge',umgekehrt:'jüngster Ring am Rand (umgedreht gespeichert)','?':'weiß nicht'}[ri]||ri):''),'DataType=Ringwidth','SeriesType=Single curve','DataFormat=Tree','Dated=Undated','DateBegin=1','DATA:Single'];
+ const hdr=['HEADER:','DateEnd='+v.length,'KeyCode='+m.name,'Unit=1/100 mm','Length='+v.length,'Location=','Species=','Project=Gemessen mit LignoWolfi Handy, '+Math.round(25.4/mmpx)+' dpi'+(META.quelle?', '+META.quelle+', untere Breite '+META.breite+' mm'+(META.halbfoto?(META.ganz?', ganze Decke, Maßstab: Strecke Rand–Rand = untere Breite':', Maßstab: Strecke Rand–Mitte = halbe untere Breite'):''):'')+(ri?', Richtung (Kunde): '+({normal:'jüngster Ring an der Fuge',umgekehrt:'jüngster Ring am Rand (umgedreht gespeichert)','?':'weiß nicht'}[ri]||ri):''),'DataType=Ringwidth','SeriesType=Single curve','DataFormat=Tree','Dated=Undated','DateBegin=1','DATA:Single'];
  const txt=hdr.concat(v).join('\r\n')+'\r\n';const u=new Uint8Array(txt.length);for(let i=0;i<txt.length;i++){const c=txt.charCodeAt(i);u[i]=c<256?c:63}   // Windows-1252 (Umlaute bleiben)
  return{file:new File([u],m.name+'.fh',{type:'text/plain'}),n:v.length,mm:w.reduce((a,b)=>a+b,0),sw,ns}}
 let FOTOS=[];

@@ -43,7 +43,7 @@ const W0=document.createElement('div');W0.id='fotoW';document.body.appendChild(W
 const fin=document.createElement('input');fin.type='file';fin.accept='image/*';fin.setAttribute('capture','environment');fin.style.display='none';document.body.appendChild(fin);
 const fin2=document.createElement('input');fin2.type='file';fin2.accept='image/*';fin2.style.display='none';document.body.appendChild(fin2);
 
-let A={kurz:'',breite:'',richtung:{B:null,T:null}},STREAM=null,LOOP=null,ORI={beta:null,gamma:null},FOTOS2={};
+let A={kurz:'',breite:'',art:'zwei',richtung:{B:null,T:null,G:null}},STREAM=null,LOOP=null,ORI={beta:null,gamma:null},FOTOS2={};
 const ICON={normal:'sym_normal.png',umgekehrt:'sym_umgekehrt.png'};
 
 // Knopf auf der Startseite
@@ -60,24 +60,27 @@ function schritt1(){
  W0.innerHTML=`<div class="seite"><h2>Instrument fotografieren</h2>
  <label class="f">Name des Instruments</label><input type="text" id="fKurz" placeholder="z. B. Gagliano" value="${esc(A.kurz)}" autocomplete="off">
  <label class="f">Untere Breite, ganz (mm)</label><input type="number" id="fBreite" inputmode="decimal" placeholder="z. B. 206" value="${esc(A.breite)}">
- <label class="f">Bass – wo liegt die scharfe Kante?</label>${kachelnHtml('B')}
- <label class="f">Diskant – wo liegt die scharfe Kante?</label>${kachelnHtml('T')}
+ <label class="f">Decke</label><div class="kacheln"><button class="weissnicht" data-art="zwei" aria-pressed="${A.art!=='ganz'}" style="margin:0">Zweiteilig<br><small>Bass + Diskant</small></button><button class="weissnicht" data-art="ganz" aria-pressed="${A.art==='ganz'}" style="margin:0">Einteilig<br><small>ganze Decke</small></button></div>
+ ${A.art==='ganz'?`<label class="f">Ganze Decke – wo liegt die scharfe Kante? (oben = Rand Bassseite)</label>${kachelnHtml('G')}`:`<label class="f">Bass – wo liegt die scharfe Kante?</label>${kachelnHtml('B')}
+ <label class="f">Diskant – wo liegt die scharfe Kante?</label>${kachelnHtml('T')}`}
  <div class="knopfzeile"><button id="fAbbr">Abbrechen</button><button id="fWeiter" class="haupt">Weiter</button></div></div>`;
  W0.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{A.kurz=q('fKurz').value;A.breite=q('fBreite').value;A.richtung[b.dataset.s]=b.dataset.k;schritt1()});
+ W0.querySelectorAll('[data-art]').forEach(b=>b.onclick=()=>{A.kurz=q('fKurz').value;A.breite=q('fBreite').value;A.art=b.dataset.art;schritt1()});
  q('fAbbr').onclick=zu;
  q('fWeiter').onclick=()=>{A.kurz=q('fKurz').value.trim();A.breite=q('fBreite').value.replace(',','.');const br=+A.breite;
   if(!A.kurz){alert('Bitte einen Namen eingeben');return}if(!(br>=120&&br<=520)){alert('Bitte die untere Breite in Millimetern eingeben (Geige etwa 200–210, Bratsche 230–260, Cello 330–360)');return}
+  if(A.art==='ganz'){if(!A.richtung.G){alert('Bitte die Richtung wählen (oder „Weiß nicht“)');return}FOTOS2={};kamera('G');return}
   if(!A.richtung.B||!A.richtung.T){alert('Bitte für Bass und Diskant die Richtung wählen (oder „Weiß nicht“)');return}
   FOTOS2={};kamera('B')};
 }
 
 
 // ---------- Schritt 2: Kamera mit Live-Anleitung, je Seite ein Foto der unteren Hälfte ----------
-const SN={B:'Bassseite',T:'Diskantseite'};
+const SN={B:'Bassseite',T:'Diskantseite',G:'ganze Decke'};
 async function kamera(seite){
  W0.innerHTML=`<video playsinline muted autoplay></video>
  <div class="ansage" id="fAns">Kamera wird gestartet …</div>
- <div class="seitenkopf" id="fKopf">${SN[seite]}, unterer Teil</div>
+ <div class="seitenkopf" id="fKopf">${seite==='G'?'Ganze Decke':SN[seite]+', unterer Teil'}</div>
  <div class="unten"><button class="klein" id="fZur">Zurück</button><button class="ausl" id="fAusl" aria-label="Auslösen">Foto</button><button class="klein" id="fApp">Kamera-App</button><button class="klein" id="fWahl">Vorhandenes Foto</button></div>`;
  q('fZur').onclick=()=>{stopp();if(seite==='T')kamera('B');else schritt1()};
  fin.onchange=()=>{const f=fin.files&&fin.files[0];fin.value='';if(f)fotoDa(f,seite);else kamera(seite)};
@@ -98,7 +101,7 @@ async function kamera(seite){
   schaerfe.push(lap);if(schaerfe.length>12)schaerfe.shift();const smax=Math.max(...schaerfe);
   const hin=[];
   if(r.dunkel)hin.push(['Mehr Licht','Das Bild ist zu dunkel.']);
-  else if(r.holz<0.25)hin.push(['Näher ran','Untere Backe der '+SN[seite]+' mit f-Loch und Steg ins Bild.']);
+  else if(r.holz<0.25)hin.push(['Näher ran',seite==='G'?'Die ganze Decke mit beiden f-Löchern ins Bild.':'Untere Backe der '+SN[seite]+' mit f-Loch und Steg ins Bild.']);
   else if(!r.rand)hin.push(['Weiter weg','Der Rand der unteren Backe muss mit ins Bild.']);
   else if(!r.fLoch)hin.push(['f-Loch ins Bild','Rand, f-Loch und Steg sollen zu sehen sein – bis über die Mitte der Decke.']);
   else if(r.holz<0.45)hin.push(['Näher ran','Die Decke soll den größten Teil des Bildes füllen.']);
@@ -188,7 +191,10 @@ async function fotoDa(blob,seite){
  let bild;try{bild=await createImageBitmap(blob)}catch(e){alert('Foto lässt sich nicht lesen');kamera(seite);return}
  let r=null;try{r=auswerten(bild)}catch(e){r={fehler:String(e&&e.message||e)}}
  if(!r||r.fehler){alert((r&&r.fehler?r.fehler+'. ':'Ich finde die Decke auf dem Foto nicht sicher. ')+'Bitte noch einmal: Rand der unteren Backe, f-Loch und Steg, Decke füllt das Bild.');kamera(seite);return}
- const L=r.liste;let mein=L.find(z=>z.layout===seite);
+ const L=r.liste;
+ if(seite==='G'){const b=L.find(z=>z.layout==='B'&&z.hw);if(!b){alert('Für die ganze Decke brauche ich ein Foto, auf dem beide f-Löcher und beide Ränder zu sehen sind.');kamera('G');return}
+  FOTOS2.G={foto:blob,...await seitenBild(bild,b,'B',true)};try{bild.close&&bild.close()}catch(e){}await fertigBauen();return}
+ let mein=L.find(z=>z.layout===seite);
  if(!mein){if(!confirm('Das Foto sieht nach der '+SN[L[0].layout]+' aus, nicht nach der '+SN[seite]+'. Trotzdem als '+SN[seite]+' nehmen?')){kamera(seite);return}mein=L[0]}
  FOTOS2[seite]={foto:blob,...await seitenBild(bild,mein,seite)};
  // ganze Decke auf einem Foto: die andere Seite gleich mit
@@ -199,12 +205,12 @@ async function fotoDa(blob,seite){
  if(!FOTOS2.B){kamera('B');return}
  await fertigBauen();
 }
-async function seitenBild(bild,r,seite){
+async function seitenBild(bild,r,seite,ganz){
  // vorläufiger Maßstab: Rand bis f-Loch ≈ halbe halbe Breite. Der echte Maßstab kommt nach dem Messen aus der halben unteren Breite.
  const hw=r.hw||r.kw/0.5,mmpx=(+A.breite/2)/hw;
  const Wp=Math.round(180/mmpx);const xsteg=r.layout==='B'?76.2/mmpx:Wp-76.2/mmpx;
  // Höhe: so weit das Foto reicht, höchstens 1,3 × halbe Breite
- let Hp=Math.round(1.3*hw);for(let y=10;y<Hp;y+=10){const sx=r.rim[0]+r.Y[0]*y,sy=r.rim[1]+r.Y[1]*y;if(sx<0||sy<0||sx>=bild.width||sy>=bild.height){Hp=y;break}}
+ let Hp=Math.round((ganz?2.12:1.3)*hw);for(let y=10;y<Hp;y+=10){const sx=r.rim[0]+r.Y[0]*y,sy=r.rim[1]+r.Y[1]*y;if(sx<0||sy<0||sx>=bild.width||sy>=bild.height){Hp=y;break}}
  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1];const X=r.X,Y=r.Y;
  const ox=dot(r.F,X)-xsteg,oy=dot(r.rim,Y);
  const c=document.createElement('canvas');c.width=Wp;c.height=Hp;const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,Wp,Hp);g.imageSmoothingQuality='high';
@@ -214,11 +220,14 @@ async function seitenBild(bild,r,seite){
 async function fertigBauen(){
  W0.innerHTML='<div class="ansage ok" id="fAns">Bilder werden vorbereitet …</div>';
  const nr=nummer();const kurz=A.kurz.replace(/[^A-Za-z0-9ÄÖÜäöüß]+/g,'').slice(0,24)||'Instrument';const files=[];
- for(const s of['B','T']){const z=FOTOS2[s];if(!z)continue;const u8=setzeDpi(new Uint8Array(await z.bild.arrayBuffer()),z.dpi);files.push(new File([u8],nr+s+'_'+kurz+'.jpg',{type:'image/jpeg'}))}
- const richt={B:A.richtung.B,T:A.richtung.T},fotos={B:FOTOS2.B&&FOTOS2.B.foto,T:FOTOS2.T&&FOTOS2.T.foto};
+ const ganz=!!FOTOS2.G;
+ if(ganz){const z=FOTOS2.G;const u8=setzeDpi(new Uint8Array(await z.bild.arrayBuffer()),z.dpi);files.push(new File([u8],nr+'BT_'+kurz+'.jpg',{type:'image/jpeg'}))}
+ else for(const s of['B','T']){const z=FOTOS2[s];if(!z)continue;const u8=setzeDpi(new Uint8Array(await z.bild.arrayBuffer()),z.dpi);files.push(new File([u8],nr+s+'_'+kurz+'.jpg',{type:'image/jpeg'}))}
+ const richt=ganz?{B:A.richtung.G}:{B:A.richtung.B,T:A.richtung.T},fotos=ganz?{B:FOTOS2.G.foto}:{B:FOTOS2.B&&FOTOS2.B.foto,T:FOTOS2.T&&FOTOS2.T.foto};
  zu();await oeffneBilder(files);
  if(META){META.richtung=richt;META.breite=+A.breite;META.quelle='Handy-Foto';META.halbfoto=true;for(const s of['B','T'])if(fotos[s])MEM.set('foto_'+s+'.jpg',fotos[s]);await merkeKacheln();
-  info(KEY+' – oben am Rand anfangen und bis zur Mitte (Fuge) messen');zeigeAnleitung()}
+  if(ganz)META.ganz=true;await merkeKacheln();
+  info(KEY+(ganz?' – ganze Decke: oben am Rand anfangen und bis zum unteren Rand messen':' – oben am Rand anfangen und bis zur Mitte (Fuge) messen'));zeigeAnleitung()}
 }
 // Vor dem Messen: Symbolbild, wo die Pfeilspitze hin muss
 function zeigeAnleitung(){W0.style.display='block';W0.innerHTML=`<div class="seite" style="display:flex;flex-direction:column;justify-content:center;gap:18px"><img src="pfeil_tafel.jpg" alt="" style="width:100%;border-radius:8px"><div class="knopfzeile"><button id="fLos" class="haupt">Messen</button></div></div>`;q('fLos').onclick=()=>{W0.style.display='none';W0.innerHTML=''}}
