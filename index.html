@@ -290,7 +290,7 @@ $('bFertig').onclick=()=>{if(!META){info('Erst Bilder öffnen');return}const z=z
   const DS=datLaden()||{};let files=fmt==='rwl'?fh.map(f=>dateiAusText(rwlTextH(f.werte,f.name,DS[f.seite]||0),f.name+'.rwl')):fh.map(f=>f.file);
   const cb=$('fBT');if(cb&&cb.checked){const b=btKurveH();if(b){const bs=DS.BT&&DS.BTlage===b.bt.lage?DS.BT:0;files.push(fmt==='rwl'?dateiAusText(rwlTextH(b.bt.mittel,b.name,bs),b.name+'.rwl'):dateiAusText(btFhText(b.bt,b.name,bs),b.name+'.fh'))}}
   files=files.concat(FOTOS);let geteilt=null;
-  try{if(navigator.canShare&&navigator.canShare({files})){geteilt=navigator.share({files,title:KEY,text:'Jahrringmessung '+KEY+' (LignoWolfi Handy)'})}}catch(e){geteilt=null}
+  try{if(navigator.canShare&&navigator.canShare({files})){geteilt=navigator.share({files})}}catch(e){geteilt=null}
   if(!geteilt){for(const f of files){const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove()}geteilt=Promise.resolve()}
   geteilt.then(()=>{fertigFlag=true;save();blatt.innerHTML=`<div class="t">Gesendet ✓</div><p style="margin:0 2px 10px;line-height:1.5">${fh.map(f=>f.name+(fmt==='rwl'?'.rwl':'.fh')+': '+f.n+' Ringe, '+f.mm.toFixed(2)+' mm, Spurwechsel '+f.sw+', Saitenregion '+f.ns).join('<br>')}${files.some(f=>/BT_|_BT/.test(f.name))?'<br>+ Mittelkurve BT':''}${FOTOS.length?'<br>+ '+FOTOS.length+' Foto(s)':''}</p><div class="g"><button id="fZu">OK</button></div>`;$('fZu').onclick=schliesseBlatt}).catch(e=>{if(e&&e.name==='AbortError')info('Senden abgebrochen – Messung bleibt gespeichert');else info('Senden nicht möglich: '+(e&&e.message||e))})};
  $('fOk').onclick=()=>senden('fh');$('fRwl').onclick=()=>senden('rwl')};
