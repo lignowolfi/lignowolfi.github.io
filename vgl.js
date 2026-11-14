@@ -42,7 +42,7 @@ const fin=document.createElement('input');fin.type='file';fin.id='refdatei';fin.
 const fhin=document.createElement('input');fhin.type='file';fhin.multiple=true;fhin.style.display='none';document.body.appendChild(fhin);
 const btn=document.createElement('button');btn.id='bVgl';btn.textContent='Vergleich';btn.title='Schnellvergleich mit deiner Datenbank';q('oben').appendChild(btn);
 
-function breitenH(x){if(!META||!META.seiten[x])return null;const P=PTS[x],mm=MM(x),w=[];for(let i=1;i<P.length;i++){if(P[i][2])continue;w.push(Math.abs(P[i][1]-P[i-1][1])*mm)}return w}
+function breitenH(x){if(!META||!META.seiten[x])return null;const P=PTS[x],mm=MM(x),w=[];for(let i=1;i<P.length;i++){if(P[i][2])continue;w.push(Math.abs(P[i][1]-P[i-1][1])*mm)}if(META.richtung&&META.richtung[x]==='umgekehrt')w.reverse();return w}
 
 function worker(){if(WK)return WK;WK=new Worker('vgl-worker.js');WK.onmessage=e=>{const m=e.data;
   if(m.typ==='stand'){STAND=m.text;const el=q('vStandH');if(el)el.textContent=m.text}
@@ -88,7 +88,7 @@ function zeigen(){const nt=DB?DB.datiert.filter(e=>e.tr).length:0,nd=DB?DB.datie
    h+=`<h3>Count (beste 100 nach <select id="vSortH"><option value="cdi" ${nachT?'':'selected'}>CDI</option><option value="tbp" ${nachT?'selected':''}>tBP</option></select>) <label style="text-transform:none;letter-spacing:0;font-weight:normal"><input type="checkbox" id="vCntTrH" ${cTr?'checked':''}> mit Treering Database</label></h3><table><tr><th>Endjahr</th><th>Count</th><th>bester CDI</th><th>bester tBP</th></tr>`+CL.map(c=>`<tr class="cnt ${c.count>=10?'gut':''} ${JAHR===c.endjahr?'wahl':''}" data-j="${c.endjahr}"><td>${c.endjahr}</td><td>${c.count}</td><td>${c.bestC!=null?Math.round(c.bestC):'–'}</td><td>${c.bestT.toFixed(1)}</td></tr>`).join('')+'</table><div class="hinweis" style="margin-top:4px">Endjahr antippen: unten nur diese Treffer.</div>';
    const TH='<tr><th class="l">Kurve</th><th>CDI</th><th>tBP</th><th>tHo</th><th>GLK</th><th>Üb.</th><th>Ende</th></tr>';
    const dl=JAHR!=null?r.datiert.filter(e=>e.endjahr===JAHR):r.datiert.slice(0,30);const trl=r.treering||[],tl=JAHR!=null?trl.filter(e=>e.endjahr===JAHR):trl.slice(0,30);
-   h+=`<h3>Datiert – beste Treffer${JAHR!=null?` mit Endjahr ${JAHR} (${dl.length}) <button id="vAlleH">alle zeigen</button>`:''}</h3><table>${TH}`+dl.map(e=>zeile(e,`Endjahr ${e.endjahr}`,e.endjahr)).join('')+'</table>';
+   h+=`<h3>Datiert – beste Treffer${JAHR!=null?` mit Endjahr ${JAHR} (${dl.length}) <button id="vAlleH">alle zeigen</button>${AUSMESS?` <button id="vDatH" style="font-weight:600">Mit Endjahr ${JAHR} datieren…</button>`:''}`:''}</h3><table>${TH}`+dl.map(e=>zeile(e,`Endjahr ${e.endjahr}`,e.endjahr)).join('')+'</table>';
    h+=`<h3>Treering Database – beste Treffer${JAHR!=null?` mit Endjahr ${JAHR} (${tl.length})`:''}</h3>`+(tl.length?`<table>${TH}`+tl.map(e=>zeile(e,`Endjahr ${e.endjahr}`,e.endjahr)).join('')+'</table>':`<div class="hinweis">${nt?'keine Treffer':'Nicht in dieser Datenbank – am PC mit LignoWolfi 2.6 neu „Fürs Handy speichern…“'}</div>`);
    h+=`<h3>Undatiert – beste Treffer</h3><table><tr><th class="l">Kurve</th><th>CDI</th><th>tBP</th><th>tHo</th><th>GLK</th><th>Üb.</th><th>Lage</th></tr>`+r.undatiert.slice(0,30).map(e=>zeile(e,`Lage ${e.lage>0?'+':''}${e.lage}`,(e.lage>0?'+':'')+e.lage)).join('')+'</table><div class="hinweis">Lage: um wie viele Ringe deine Kurve nach (+) bzw. vor (−) dem Anfang der Vergleichskurve beginnt.</div>';
    h+='<div class="hinweis" style="margin-top:8px">Finger halten auf einem Kurvennamen: beide Kurven im Vergleich. Auf „Abschnitte“: Abschnittsprüfung. Auf Bass / Diskant / Mittelkurve: deine Kurve(n).</div>'}
@@ -106,6 +106,7 @@ function zeigen(){const nt=DB?DB.datiert.filter(e=>e.tr).length:0,nd=DB?DB.datie
  {const so=q('vSortH');if(so)so.onchange=e=>{try{localStorage.setItem('lwh_sort',e.target.value)}catch(_){}JAHR=null;zeigen()};const c=q('vCntTrH');if(c)c.onchange=e=>{try{localStorage.setItem('lwh_cnttr',e.target.checked?'1':'0')}catch(_){}JAHR=null;zeigen()}}
  panel.querySelectorAll('tr.cnt').forEach(tr=>tr.onclick=()=>{const j=+tr.dataset.j;JAHR=JAHR===j?null:j;zeigen()});
  const al=q('vAlleH');if(al)al.onclick=()=>{JAHR=null;zeigen()};
+ const dh=q('vDatH');if(dh)dh.onclick=()=>datierenH();
  panel.querySelectorAll('button.abs').forEach(b=>{b.addEventListener('pointerdown',ev=>{ev.preventDefault();try{b.setPointerCapture(ev.pointerId)}catch(_){}abschn(b)});b.addEventListener('contextmenu',ev=>ev.preventDefault())});
  panel.querySelectorAll('.kn').forEach(sp=>{sp.addEventListener('pointerdown',ev=>{ev.preventDefault();try{sp.setPointerCapture(ev.pointerId)}catch(_){}kurven(sp)});sp.addEventListener('contextmenu',ev=>ev.preventDefault())});
 }
@@ -123,6 +124,12 @@ function weg(){plot.style.display='none';const a=document.getElementById('absH')
 addEventListener('pointerup',weg);addEventListener('pointercancel',weg);addEventListener('blur',weg);
 document.addEventListener('visibilitychange',weg);
 
+// Datieren: Startjahre je Seite aus dem gewählten Endjahr; gemerkt im iPhone, „Fertig“ sendet dann datierte .fh/.rwl
+function datierenH(){if(!VGL||!AUSMESS||JAHR==null||!PROBE)return;const k=TAB,X=JAHR,o=VGL.out[k];if(!o)return;const nachT=localStorage.getItem('lwh_sort')==='tbp';const r=nachT&&o.nachTbp?Object.assign({},o,o.nachTbp):o;const c=(r.count||[]).find(c=>c.endjahr===X)||{};
+ const d={X,k};if(k==='M'){const bt=VGL.bt;if(!bt)return;const s0=Math.min(0,bt.lage),m0=X-bt.mittel.length+1;if(PROBE.B)d.B=m0-s0;if(PROBE.T)d.T=m0+bt.lage-s0;d.BT=m0;d.BTlage=bt.lage}else{const P=PROBE[k];if(!P)return;d[k]=X-P.length+1;const alt=datLaden();if(alt&&alt.X){for(const s of['B','T'])if(s!==k&&alt[s])d[s]=alt[s]}}
+ const z=['B','T'].filter(s=>d[s]).map(s=>(s==='B'?'Bass':'Diskant')+': '+d[s]+'–'+(d[s]+PROBE[s].length-1));if(d.BT)z.push('Mittelkurve BT: '+d.BT+'–'+X);
+ if(!confirm('Mit Endjahr '+X+' datieren?\n\n'+z.join('\n')+'\n\nCount '+(c.count!=null?c.count:'–')+' · bester CDI '+(c.bestC!=null?Math.round(c.bestC):'–')+' · bester tBP '+(c.bestT!=null?c.bestT.toFixed(1):'–')+'\n\nRingbreiten und Kommentare bleiben unverändert. Beim Senden („Fertig“) gehen die Kurven dann mit diesen Jahren raus.'))return;
+ datSetzen(d);alert('Datiert ✓\n\n'+z.join('\n')+'\n\nZum Senden: „Fertig“ → „.fh senden“ oder „.rwl senden“.')}
 function eigene(k){if(!VGL||!PROBE)return;const L0=LBLX||{B:'Bass',T:'Diskant'};const S=[];let titel;
  if(k==='M'){const bt=VGL.bt;if(!bt||!bt.mittel)return;const s0=Math.min(0,bt.lage);if(PROBE.B)S.push({v:PROBE.B,off:-s0,col:'#d01818',lw:1.1,n:L0.B});if(PROBE.T)S.push({v:PROBE.T,off:bt.lage-s0,col:'#1f4fbf',lw:1.1,n:L0.T});S.push({v:bt.mittel,off:0,col:'#000',lw:2,n:'Mittelkurve BT'});
   titel='Mittelkurve BT · Diskant '+(bt.lage>=0?bt.lage+' Ringe nach':(-bt.lage)+' Ringe vor')+' Bass · tBP '+bt.tbp.toFixed(1)+(bt.cdi!=null?' · CDI '+Math.round(bt.cdi):'')}
