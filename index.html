@@ -142,7 +142,7 @@ function draw(){cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#7d8084';cx.fillRect(
  // Ringe
  const R=rings(side),P=PTS[side];
  R.forEach((r,k)=>{const a=toS(r.a[0]-TW/2,r.a[1]),b=toS(r.b[0]+TW/2,r.b[1]);cx.strokeStyle='#000';cx.lineWidth=0.7;cx.strokeRect(a[0],Math.min(a[1],b[1]),b[0]-a[0],Math.abs(b[1]-a[1]));
-  if(Z>=0.2){cx.font='11px -apple-system,Segoe UI,sans-serif';cx.fillStyle='#000';cx.fillText(String(k),b[0]+4,(a[1]+b[1])/2+4)}});
+  if(Z>=0.2){const tx=b[0]+4,ty=(a[1]+b[1])/2+4;if(k===R.length-1){cx.font='bold 12px -apple-system,Segoe UI,sans-serif';cx.lineJoin='round';cx.lineWidth=3;cx.strokeStyle='rgba(0,0,0,.75)';cx.strokeText(String(k),tx,ty);cx.fillStyle='#fff';cx.fillText(String(k),tx,ty)}else{cx.font='11px -apple-system,Segoe UI,sans-serif';cx.fillStyle='#000';cx.fillText(String(k),tx,ty)}}});
  if(lastHi&&P.length&&P[P.length-1]===lastHi){const c=cxOf(side,P.length-1);const a=toS(c-TW/2,lastHi[1]),b=toS(c+TW/2,lastHi[1]);cx.strokeStyle='#fff';cx.lineWidth=2;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke()}
  // Gummiband vom letzten Punkt zur Marke
  const mi=toI(M[0],M[1]);let anc=null,ax=0;if(mode&&mode.kind==='ins'){anc=mode.anchor;ax=cxOf(side,Math.max(0,mode.at-1))}else if(open[side]&&P.length){anc=P[P.length-1];ax=cxOf(side,P.length-1)}
@@ -258,7 +258,14 @@ function fhText(x){const m=META.seiten[x],P=PTS[x],K=KOM[x],mmpx=MM(x),RAND=0.5*
  const ri=META.richtung&&META.richtung[x];if(ri==='umgekehrt')v.reverse();
  const hdr=['HEADER:','DateEnd='+v.length,'KeyCode='+m.name,'Unit=1/100 mm','Length='+v.length,'Location=','Species=','Project=Gemessen mit LignoWolfi Handy, '+Math.round(25.4/mmpx)+' dpi'+(META.quelle?', '+META.quelle+', untere Breite '+META.breite+' mm'+(META.halbfoto?(META.ganz?', ganze Decke, Maßstab: Strecke Rand–Rand = untere Breite':', Maßstab: Strecke Rand–Mitte = halbe untere Breite'):''):'')+(ri?', Richtung (Kunde): '+({normal:'jüngster Ring an der Fuge',umgekehrt:'jüngster Ring am Rand (umgedreht gespeichert)','?':'weiß nicht'}[ri]||ri):''),'DataType=Ringwidth','SeriesType=Single curve','DataFormat=Tree','Dated=Undated','DateBegin=1','DATA:Single'];
  const txt=hdr.concat(v).join('\r\n')+'\r\n';const u=new Uint8Array(txt.length);for(let i=0;i<txt.length;i++){const c=txt.charCodeAt(i);u[i]=c<256?c:63}   // Windows-1252 (Umlaute bleiben)
- return{file:new File([u],m.name+'.fh',{type:'text/plain'}),n:v.length,mm:w.reduce((a,b)=>a+b,0),sw,ns}}
+ return{file:new File([u],m.name+'.fh',{type:'text/plain'}),n:v.length,mm:w.reduce((a,b)=>a+b,0),sw,ns,werte:ri==='umgekehrt'?w.slice().reverse():w.slice(),name:m.name}}
+// rwl wie der TSAP-Export: Kennung = 8-stellige Nummer, undatiert ab Jahr 1, 1/100 mm, Ende 999 – ohne Kommentare
+function rwlTextH(werte,key){const m=key.match(/^\d{7,8}/);const id=(m?m[0]:key.replace(/[^A-Za-z0-9]/g,'').slice(0,8)).padEnd(8,' ').slice(0,8);
+ const a=werte.map(x=>Math.round(x*100)).concat([999]);const L=[];let y=1,k=0;while(k<a.length){const n=y===1?9:10;L.push(id+String(y).padStart(4,' ')+a.slice(k,k+n).map(x=>String(x).padStart(6,' ')).join(''));k+=n;y+=n}return L.join('\r\n')+'\r\n'}
+function dateiAusText(txt,name){const u=new Uint8Array(txt.length);for(let i=0;i<txt.length;i++){const c=txt.charCodeAt(i);u[i]=c<256?c:63}return new File([u],name,{type:'text/plain'})}
+function btKurveH(){const B=['B','T'].every(x=>META.seiten[x]&&PTS[x].length>31);if(!B||typeof Dendro==='undefined')return null;const fb=fhText('B'),ft=fhText('T');const bt=Dendro.btMittel(fb.werte,ft.werte,30);if(!bt)return null;
+ const name=/^\d{7,8}B\d?_/i.test(fb.name)?fb.name.replace(/^(\d{7,8})B\d?_/i,'$1BT_'):fb.name+'_BT';return{bt,name}}
+function btFhText(bt,name){const v=bt.mittel.map(x=>String(Math.round(x*100)));return ['HEADER:','DateEnd='+v.length,'KeyCode='+name,'Unit=1/100 mm','Length='+v.length,'Location=','Species=','Project=Mittelkurve aus B und T, LignoWolfi Handy, Diskant-Lage '+bt.lage+', tBP '+bt.tbp.toFixed(1),'DataType=Ringwidth','SeriesType=Single curve','DataFormat=Tree','Dated=Undated','DateBegin=1','DATA:Single'].concat(v).join('\r\n')+'\r\n'}
 let FOTOS=[];
 $('fotos').onchange=e=>{FOTOS=[...e.target.files];e.target.value='';const el=$('fAnz');if(el)el.textContent=FOTOS.length?FOTOS.length+' Foto(s) dabei':'keine Fotos'};
 // Prüfung vor dem Absenden: Ringzahl, Bass gegen Diskant, auffällige Ringbreiten (ändert nichts an der Messung)
@@ -272,13 +279,17 @@ function pruefHtml(){if(typeof Dendro==='undefined')return'';const B=breitenP('B
 $('bFertig').onclick=()=>{if(!META){info('Erst Bilder öffnen');return}const z=zusammenfassung();FOTOS=[];
  blatt.innerHTML=`<div class="t">${KEY.replace(/[<&]/g,'')}</div><p style="margin:0 2px 10px;line-height:1.5">${z.join('<br>')}<br><span style="color:var(--leise)">Die Messung ist im iPhone gespeichert${gespeichert?' (zuletzt '+gespeichert.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+')':''}.</span></p>${pruefHtml()}
  <div class="g"><button id="fFoto">Fotos vom Instrument anhängen</button><span id="fAnz" style="align-self:center;color:var(--leise)">keine Fotos</span>
- <button id="fOk" style="background:var(--akzent);color:#fff;border-color:var(--akzent)">.fh senden</button><button id="fWeiter">Weiter messen</button></div>`;
+ <button id="fOk" style="background:var(--akzent);color:#fff;border-color:var(--akzent)">.fh senden</button><button id="fRwl">.rwl senden</button><button id="fWeiter">Weiter messen</button></div>${(()=>{const b=btKurveH();return b?`<label style="display:flex;gap:8px;align-items:center;margin:8px 2px 0;font-size:14px"><input type="checkbox" id="fBT" style="width:20px;height:20px"> Mittelkurve BT mitsenden (${esc2(b.name)}, tBP ${b.bt.tbp.toFixed(1)}${b.bt.tbp<4?' – B und T passen nicht sicher zusammen':''})</label>`:''})()}`;
  blatt.style.display='block';$('fWeiter').onclick=schliesseBlatt;$('fFoto').onclick=()=>$('fotos').click();
- $('fOk').onclick=()=>{const fh=['B','T'].filter(x=>META.seiten[x]&&PTS[x].length>1).map(fhText);if(!fh.length){info('Noch keine Ringe gemessen');return}
-  const files=fh.map(f=>f.file).concat(FOTOS);let geteilt=null;
+ const senden=fmt=>{const fh=['B','T'].filter(x=>META.seiten[x]&&PTS[x].length>1).map(fhText);if(!fh.length){info('Noch keine Ringe gemessen');return}
+  let files=fmt==='rwl'?fh.map(f=>dateiAusText(rwlTextH(f.werte,f.name),f.name+'.rwl')):fh.map(f=>f.file);
+  const cb=$('fBT');if(cb&&cb.checked){const b=btKurveH();if(b)files.push(fmt==='rwl'?dateiAusText(rwlTextH(b.bt.mittel,b.name),b.name+'.rwl'):dateiAusText(btFhText(b.bt,b.name),b.name+'.fh'))}
+  files=files.concat(FOTOS);let geteilt=null;
   try{if(navigator.canShare&&navigator.canShare({files})){geteilt=navigator.share({files,title:KEY,text:'Jahrringmessung '+KEY+' (LignoWolfi Handy)'})}}catch(e){geteilt=null}
   if(!geteilt){for(const f of files){const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove()}geteilt=Promise.resolve()}
-  geteilt.then(()=>{fertigFlag=true;save();blatt.innerHTML=`<div class="t">Gesendet ✓</div><p style="margin:0 2px 10px;line-height:1.5">${fh.map(f=>f.file.name+': '+f.n+' Ringe, '+f.mm.toFixed(2)+' mm, Spurwechsel '+f.sw+', Saitenregion '+f.ns).join('<br>')}${FOTOS.length?'<br>+ '+FOTOS.length+' Foto(s)':''}</p><div class="g"><button id="fZu">OK</button></div>`;$('fZu').onclick=schliesseBlatt}).catch(e=>{if(e&&e.name==='AbortError')info('Senden abgebrochen – Messung bleibt gespeichert');else info('Senden nicht möglich: '+(e&&e.message||e))})}};
+  geteilt.then(()=>{fertigFlag=true;save();blatt.innerHTML=`<div class="t">Gesendet ✓</div><p style="margin:0 2px 10px;line-height:1.5">${fh.map(f=>f.name+(fmt==='rwl'?'.rwl':'.fh')+': '+f.n+' Ringe, '+f.mm.toFixed(2)+' mm, Spurwechsel '+f.sw+', Saitenregion '+f.ns).join('<br>')}${files.some(f=>/BT_|_BT/.test(f.name))?'<br>+ Mittelkurve BT':''}${FOTOS.length?'<br>+ '+FOTOS.length+' Foto(s)':''}</p><div class="g"><button id="fZu">OK</button></div>`;$('fZu').onclick=schliesseBlatt}).catch(e=>{if(e&&e.name==='AbortError')info('Senden abgebrochen – Messung bleibt gespeichert');else info('Senden nicht möglich: '+(e&&e.message||e))})};
+ $('fOk').onclick=()=>senden('fh');$('fRwl').onclick=()=>senden('rwl')};
+const esc2=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 // ---------- Ring-Menue ----------
 const blatt=$('blatt');let delArm=false;

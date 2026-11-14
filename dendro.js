@@ -69,24 +69,30 @@ function glk(a,b,ia,ib,len){let g=0,n=0;for(let k=1;k<len;k++){const a0=a[ia+k-1
 // Probe gegen Referenz an Lage d (Probe beginnt d Ringe nach Referenzbeginn)
 function vergleichLage(p,r,d){const ip=Math.max(0,-d),ir=Math.max(0,d);const len=Math.min(p.vals.length-ip,r.vals.length-ir);if(len<=0)return null;
   const cb=korr(p.bp,r.bp,ip,ir,len),ch=korr(p.ho,r.ho,ip,ir,len);
-  return{d,ueb:len,tbp:tWert(cb.r,cb.n),tho:tWert(ch.r,ch.n),nbp:cb.n,glk:glk(p.vals,r.vals,ip,ir,len)}}
+  const tbp=tWert(cb.r,cb.n),tho=tWert(ch.r,ch.n),g=glk(p.vals,r.vals,ip,ir,len);
+  return{d,ueb:len,tbp,tho,nbp:cb.n,glk:g,cdi:cdiWert(g,tbp,tho,len,Math.min(p.vals.length,r.vals.length))}}
+// Cross Date Index wie TSAP-Win: CDI = (G − 50 + 50·√(Überlappung/max. Überlappung)) · T / 10, G = Gleichläufigkeit %, T = (tBP + tHo)/2
+function cdiWert(g,tbp,tho,ueb,maxUeb){if(!(maxUeb>0))return 0;return (g-50+50*Math.sqrt(ueb/maxUeb))*((tbp+tho)/2)/10}
 
 // alle Lagen; nur Lagen mit genug Ueberlappung; Rueckgabe: beste Treffer je Referenz (bis zu k)
 function alleLagen(p,r,minUeb,k){const out=[];for(let d=-(p.vals.length-minUeb);d<=r.vals.length-minUeb;d++){const ip=Math.max(0,-d),ir=Math.max(0,d);const len=Math.min(p.vals.length-ip,r.vals.length-ir);if(len<minUeb)continue;
   const cb=korr(p.bp,r.bp,ip,ir,len);const tb=tWert(cb.r,cb.n);if(tb<2.5||cb.n<minUeb-6)continue;out.push({d,tbp:tb,len})}
-  out.sort((a,b)=>b.tbp-a.tbp);return out.slice(0,k).map(o=>vergleichLage(p,r,o.d))}
+  out.sort((a,b)=>b.tbp-a.tbp);return out.slice(0,Math.max(3*k,8)).map(o=>vergleichLage(p,r,o.d)).sort((a,b)=>b.cdi-a.cdi).slice(0,k)}
 
 // ---------- Schnellvergleich ----------
 // probe: {name, vals}; refs: [{name, ordner, start|null, vals, chrono}]
 function schnellvergleich(probe,refs,opt){opt=Object.assign({minUeb:40,top:30,countTop:100},opt||{});
   const p=vorbereiten({name:probe.name,start:null,vals:probe.vals});const dat=[],und=[];
   for(let ri=0;ri<refs.length;ri++){const r0=refs[ri];const r=r0._v||(r0._v=vorbereiten(r0));if(r===p)continue;const hits=alleLagen(p,r,opt.minUeb,3);
-    for(const h of hits){if(!h)continue;const e={ri,name:r0.name,ordner:r0.ordner||'',chrono:!!r0.chrono,tbp:h.tbp,tho:h.tho,glk:h.glk,ueb:h.ueb,d:h.d};
+    for(const h of hits){if(!h)continue;const e={ri,name:r0.name,ordner:r0.ordner||'',chrono:!!r0.chrono,tr:!!r0.tr,cdi:h.cdi,tbp:h.tbp,tho:h.tho,glk:h.glk,ueb:h.ueb,d:h.d};
       if(r0.start!=null){e.endjahr=r0.start+h.d+p.vals.length-1;dat.push(e)}else{e.lage=h.d;und.push(e)}}}
-  dat.sort((a,b)=>b.tbp-a.tbp);und.sort((a,b)=>b.tbp-a.tbp);
-  const cnt=new Map();for(const e of dat.slice(0,opt.countTop))cnt.set(e.endjahr,(cnt.get(e.endjahr)||0)+1);
-  const count=[...cnt.entries()].map(([j,c])=>({endjahr:j,count:c,bestT:Math.max(...dat.slice(0,opt.countTop).filter(e=>e.endjahr===j).map(e=>e.tbp))})).sort((a,b)=>b.count-a.count||b.bestT-a.bestT);
-  return{datiert:dat.slice(0,Math.max(opt.top,opt.countTop)),undatiert:und.slice(0,opt.top),count:count.slice(0,10),nRefs:refs.length,ringe:p.vals.length}}
+  // Rangfolge nach CDI (wie TSAP) und zusätzlich nach tBP; Count jeweils aus den besten 100 der Rangfolge
+  const rang=key=>{const D=dat.slice().sort((a,b)=>b[key]-a[key]),U=und.slice().sort((a,b)=>b[key]-a[key]);
+    const zaehle=L=>{const T=L.slice(0,opt.countTop),cnt=new Map();for(const e of T)cnt.set(e.endjahr,(cnt.get(e.endjahr)||0)+1);
+      return[...cnt.entries()].map(([j,c])=>{const E=T.filter(e=>e.endjahr===j);return{endjahr:j,count:c,bestT:Math.max(...E.map(e=>e.tbp)),bestC:Math.max(...E.map(e=>e.cdi))}}).sort((a,b)=>b.count-a.count||b.bestC-a.bestC).slice(0,10)};
+    const inst=D.filter(e=>!e.tr),trl=D.filter(e=>e.tr),n=Math.max(opt.top,opt.countTop);
+    return{datiert:inst.slice(0,n),treering:trl.slice(0,n),undatiert:U.slice(0,opt.top),count:zaehle(D),countInst:zaehle(inst)}};
+  return Object.assign(rang('cdi'),{nachTbp:rang('tbp'),nRefs:refs.length,ringe:p.vals.length})}
 
 // B und T zueinander legen, Mittelkurve bilden (Lage d: T beginnt d Ringe nach B)
 function btMittel(b,t,minUeb){minUeb=minUeb||30;const B=vorbereiten({vals:b}),T=vorbereiten({vals:t});let best=null;
@@ -110,6 +116,6 @@ function pruefung(B,T,opt){opt=Object.assign({minRinge:50,zuBreit:2.2,zuSchmal:0
     nb.sort((a,b)=>a-b);const med=nb[nb.length>>1],q=v[i]/med;if(q>=opt.zuBreit)r.auff.push({s:k,i,q,typ:'breit'});else if(q<=opt.zuSchmal)r.auff.push({s:k,i,q,typ:'schmal'})}}
   return r}
 
-const api={abschnitte,pruefung,parseTucsonRwl,parseTucsonCrn,parseFh,parseDatei,vorbereiten,vergleichLage,schnellvergleich,btMittel,tWert,korr,glk};
+const api={cdiWert,abschnitte,pruefung,parseTucsonRwl,parseTucsonCrn,parseFh,parseDatei,vorbereiten,vergleichLage,schnellvergleich,btMittel,tWert,korr,glk};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.Dendro=api;
 })(typeof self!=='undefined'?self:this);
